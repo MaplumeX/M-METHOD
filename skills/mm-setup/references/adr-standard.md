@@ -34,6 +34,7 @@ this file:
 | `architecture` | How modules relate, the vocabulary of the system, public seams. |
 | `feature` | A new user- or model-facing capability. |
 | `bug-fix` | Corrects a defect, or closes a gap that let one happen. |
+| `design` | The visual system: type and spacing scales, color ramps, radius and elevation scales, component contracts. |
 | `process` | Tooling, gates, workflow around the code — not runtime behavior. |
 
 The `bug-fix` / `feature` line: a bug fix restores behaviour that was already
