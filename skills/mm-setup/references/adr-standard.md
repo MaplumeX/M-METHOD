@@ -105,6 +105,24 @@ per alternative, or a `### Why not <X>?` subsection for contested ones. Recorded
 never invented. A decision written without what it beat invites re-litigation,
 which is the failure these records exist to prevent.
 
+## Plans
+
+A plan is an execution attachment to a `proposed/` record, not a record itself. The
+record carries the decision, the alternatives, and the consequences; the plan carries
+steps, verification, and prerequisites. A plan that restates the rationale has
+created a second copy that will drift, so it links the record instead.
+
+- One plan per record, named `<record-name>.plan.md` in the same folder.
+- Header is `# Plan: <title>`, then a line `ADR: <relative link to the record>`,
+  optionally followed by `Constrained by:` for other records that bind the work.
+- Plans exist only in `proposed/`. Finding a plan beside an `implemented/` record
+  means the work was recorded as shipped before its acceptance check ran.
+- Plans are edited freely — they are working state, not history.
+- Delete the plan in the same change that promotes its record to `implemented/`.
+  Git holds the history; a retained plan becomes a second source of rationale.
+- When the direction changes, the record is superseded and the old plan is deleted.
+  A plan never migrates to a different record.
+
 ## Moving between lifecycles
 
 Moving a file means updating `Status:` and re-satisfying that folder's skeleton in
