@@ -217,3 +217,4 @@ Sources and licences: [ATTRIBUTION.md](../ATTRIBUTION.md).
 | [`12-tailwind.md`](12-tailwind.md) | the scales from every chapter | Optional mapping: spacing, text, color, shadow, radius, focus |
 | [`13-beyond.md`](13-beyond.md) | — outside the book | Dark mode, focus, target sizes, motion, breakpoints, z-index, semantic tokens, form a11y, loading, truncation |
 | [`14-laws.md`](14-laws.md) | the highest-frequency rules | Twelve laws, hard gates, §9 practices |
+| [`15-direction.md`](15-direction.md) | — outside the book | Direction lock, absolute bans, the AI Slop Test |

@@ -70,6 +70,9 @@ passes; the record exists.
 The order is the method. Out of order produces over-decorated, under-structured
 screens.
 
+0. **Lock the direction** (`15-direction.md`). Name the aesthetic in specific terms and
+   pick one signature — "clean and modern" is not a direction. State the visual thesis,
+   the content plan and the interaction thesis in three lines before any markup.
 1. Start with a feature, not a shell. `§1.1`
 2. Work in grayscale — force spacing, size and contrast to carry the hierarchy. `§1.2.1`
 3. Rank the content primary / secondary / tertiary, and the actions one primary / a few
@@ -91,7 +94,7 @@ makes the process checkable.
 **Stops at**: design direction (not detail), a missing scale (go to System).
 
 **Done when**: screenshots exist, every change traces to a rule id, the empty state is
-there.
+there, and the AI Slop Test in `15-direction.md` has been run.
 
 ## Refine · Change an existing interface
 
@@ -128,7 +131,8 @@ screenshot.
 Same as Refine steps 1–2, with no code changes.
 
 **Produces** a findings report: **symptom → rule id → concrete fix**, ordered by
-severity, not by lens.
+severity, not by lens. Run the AI Slop Test in `15-direction.md` alongside it: a report
+that misses "these are three identical cards" reviewed compliance, not the design.
 
 **Done when**: every finding carries a rule id, and anything you did not look at is
 stated as not looked at. A finding without a rule id is an opinion — and an opinion is
@@ -195,4 +199,5 @@ recording; the system it draws from is.
 | `12-tailwind.md` | Optional mapping, never a binding |
 | `13-beyond.md` | Dark mode, focus, target sizes, motion, breakpoints, z-index, semantic tokens |
 | `14-laws.md` | Twelve laws and the hard gates |
+| `15-direction.md` | Direction lock, absolute bans, the AI Slop Test |
 | `00-coverage.md` | All 151 rules and where they live |
