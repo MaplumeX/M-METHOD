@@ -174,6 +174,15 @@ Link other records with relative markdown links, never bare numbers or prose:
 `[the storage decision](../architecture/2026-03-04-session-storage.md)`. Links stay
 mechanically checkable and survive moves between folders.
 
+A record in the same folder is linked by bare filename; anything else is relative
+from the record's own folder, so `../../` reaches the ADR root. Pointing out to code,
+docs, or a plan works the same way — the link carries the address, the sentence
+carries the reason.
+
+Link text names the decision (`[the storage decision]`), not the action
+(`[see here]`). State the relationship in the sentence — supersedes, constrained by,
+deferred — because a link alone does not say whether two records agree.
+
 ## Language
 
 Paths, `Status:` values, and section headings stay in English — they are the
