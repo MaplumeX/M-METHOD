@@ -22,34 +22,29 @@ skills/<skill-name>/references/
 
 ## Install
 
-With the [skills CLI](https://skills.sh) — copies the skill directories:
+With the [skills CLI](https://skills.sh) — copies the skill directories into your
+agent:
 
 ```bash
-npx skills add MaplumeX/M-METHOD -a pi        # into this project
-npx skills add MaplumeX/M-METHOD -a pi -g     # for every project
-npx skills add MaplumeX/M-METHOD -a pi --skill mm-plan   # just one
+npx skills add MaplumeX/M-METHOD                        # pick agents interactively
+npx skills add MaplumeX/M-METHOD -g                     # for every project
+npx skills add MaplumeX/M-METHOD --skill mm-plan        # just one
+npx skills add MaplumeX/M-METHOD --agent claude-code codex cursor
 ```
 
-Re-run to update; edit the installed copies freely. Drop `-a pi` to pick the agent
-interactively.
+Re-run to update; the installed copies are yours to edit.
 
-## Dev loop
+## Local development
 
-While editing this repo, install it as a Pi package instead:
+Install from this checkout to try a change before pushing it:
 
 ```bash
-pi install /path/to/M-METHOD
+npx skills add ./ --agent <agent>
 ```
 
-Local packages load from the resolved path without copying, so edits take effect on
-`/reload` — write and use from the same directory. Use one of the two mechanisms,
-not both, or every skill is loaded twice under the same name.
-
-Then:
-
-```
-/skill:<name> [args]    force-load a skill
-```
+The CLI copies files rather than linking them, so re-run it after each edit. If your
+agent supports loading skills from an arbitrary directory, pointing it at this
+checkout works too — just don't do both, or every name loads twice.
 
 ## Conventions
 
