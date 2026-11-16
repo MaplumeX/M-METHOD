@@ -4,13 +4,16 @@ A plan is the execution attachment to a `proposed/` ADR. It says what to do, in 
 order, and how to know it worked. It does not say why that approach was chosen — the
 record owns the rationale, and copying it here creates a second copy that drifts.
 
-Path: `.agents/ADR/proposed/{class}/<record-name>.plan.md`. One per record.
+Path: `.agents/ADR/proposed/{class}/yyyy-mm-dd-<delivery-slug>.plan.md`, in the
+folder of its first `ADR:` record. One plan per delivery — a delivery may land
+several decisions, and with a single one the slug is the record name.
 
 ```markdown
 # Plan: <title>
 
-ADR: ../<record-name>.md
-Constrained by: ../<other-record>.md
+ADR: ../<record>.md
+ADR: ../<other-record>.md
+Constrained by: ../<constraint-record>.md
 
 ## Scope
 ## Not in scope
@@ -27,9 +30,13 @@ include it when it has content, omit it when it does not. A heading followed by
 
 ## Header
 
-`ADR:` is a relative link to the record this plan executes — the primary decision,
-never a bare filename. A plan without that line is unattached and cannot be closed
-out.
+`ADR:` is a relative link to a record this plan executes, one line per decision,
+never a bare filename. The first is the primary record and names the file. A plan
+without that line is unattached and cannot be closed out.
+
+Every listed record ships with this delivery. A record that half-shipped is removed
+from the header and stays in `proposed/` — `implemented/` means delivered, not
+attempted.
 
 `Constrained by:` lists other records that bind the work without being executed here
 (a packaging decision that forbids new dependencies, a naming rule). Optional, but

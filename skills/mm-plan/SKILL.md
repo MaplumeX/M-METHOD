@@ -100,8 +100,12 @@ this one.
 Each round reshapes the tree: settled decisions push the frontier outward and
 unblock what depended on them. Recompute the frontier and ask the next round.
 
-Keep a running list of settled decisions. After three rounds most of the tree is
-behind you, and a plan that forgets what was already decided starts re-asking it.
+Keep a running list of settled decisions and the options rejected along the way —
+the rejected ones are what `## Alternatives considered` draws from later.
+
+There is no round limit. The tree decides how long this takes, not a feeling that
+three rounds is enough. A round that asks a single question usually means the
+frontier was computed wrong: independent questions belong in the same round.
 
 If the user does not know the answer to a frontier question, it is not a decision:
 either it is a fact to look up, or it is a constraint to assume out loud ("assuming
@@ -110,13 +114,25 @@ default.
 
 ## Converge
 
-When the frontier is thin enough to see the shape of the answer:
+When the frontier is thin enough to see the shape of the answer, widen once before
+you narrow. Name the real candidates and the tradeoff each carries — different
+shapes, not one design with different parameters. This is not a menu for the user:
+you still recommend one. It is the evidence that the recommendation beat something,
+and it is where `## Alternatives considered` comes from.
+
+If only one candidate survives your own scrutiny, say which ones died and why. That
+reasoning is the alternatives list.
+
+Widening can expose a question you cannot answer. That is a new frontier — go back to
+Rounds rather than recommending under uncertainty.
+
+Then:
 
 - Give **one** recommended approach: rationale, effort, risk, and what existing code
   it builds on.
 - Always include the minimal option — the version that adds the least.
-- Mention an alternative only when a concrete tradeoff could change the user's
-  choice. A menu of equal options is a way of not deciding.
+- Do not hand the widening back as a ballot. It is evidence for the recommendation,
+  not a set of equal options for the user to pick from.
 - Name the most fragile assumption: "This plan assumes X. If X does not hold, Y
   happens." If it is load-bearing, deform the design to survive its failure instead
   of planning on hope.
@@ -156,9 +172,10 @@ disclosing the failure.
 If the decision is durable — expensive to reverse, or likely to be re-litigated —
 it produces two artifacts:
 
-- `proposed/{class}/yyyy-mm-dd-title.md` — the record, per `.agents/ADR/AGENTS.md`.
-- `proposed/{class}/yyyy-mm-dd-title.plan.md` — the execution attachment, per
-  `references/plan-file.md`.
+- `proposed/{class}/yyyy-mm-dd-<slug>.md` — one record per decision, per
+  `.agents/ADR/AGENTS.md`.
+- `proposed/{class}/yyyy-mm-dd-<delivery-slug>.plan.md` — the execution attachment
+  for all of them, in the first record's folder, per `references/plan-file.md`.
 
 Never write an `implemented/` record for something that has not shipped. The record
 moves there after acceptance, when `mm-land` runs — not before.

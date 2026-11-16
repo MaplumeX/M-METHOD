@@ -98,30 +98,45 @@ Proposal-era headings (`## Proposal`, `## Plan`, `## Acceptance criteria`, `## R
 must not survive into `implemented/` — fold them into `## Decision` and
 `## Consequences`.
 
-## Alternatives considered — mandatory
+## Alternatives considered
 
-Every record names each genuine alternative and why it lost: one bold-led paragraph
-per alternative, or a `### Why not <X>?` subsection for contested ones. Recorded,
-never invented. A decision written without what it beat invites re-litigation,
-which is the failure these records exist to prevent.
+Every record names each alternative that was actually on the table and why it lost:
+one bold-led paragraph per alternative, or a `### Why not <X>?` subsection for
+contested ones. Candidates raised during planning, dismissed in an earlier record,
+or present in the code and rejected here — if you cannot point at where it was
+proposed, delete it. An invented option fabricates a deliberation that never
+happened, and a later reader will trust it.
+
+A decision written without what it beat invites re-litigation, which is the failure
+these records exist to prevent. But a space that was genuinely one-way says so:
+
+```markdown
+None considered — <why only one direction fit>.
+```
 
 ## Plans
 
-A plan is an execution attachment to a `proposed/` record, not a record itself. The
-record carries the decision, the alternatives, and the consequences; the plan carries
-steps, verification, and prerequisites. A plan that restates the rationale has
-created a second copy that will drift, so it links the record instead.
+A plan is an execution attachment to one or more `proposed/` records, not a record
+itself. The records carry the decisions, the alternatives, and the consequences; the
+plan carries steps, verification, and prerequisites. A plan that restates the
+rationale has created a second copy that will drift, so it links the records instead.
 
-- One plan per record, named `<record-name>.plan.md` in the same folder.
-- Header is `# Plan: <title>`, then a line `ADR: <relative link to the record>`,
-  optionally followed by `Constrained by:` for other records that bind the work.
+- One plan per delivery, named `yyyy-mm-dd-<delivery-slug>.plan.md` in the folder of
+  its first `ADR:` record. With a single record the slug is the record name, so the
+  two files match.
+- Header is `# Plan: <title>`, then one `ADR:` line per decision this delivery lands.
+  The first is the primary record. `Constrained by:` follows for records that bind
+  the work without shipping in it.
+- Every listed record ships with this plan. A record that half-shipped stays in
+  `proposed/` — `implemented/` means delivered, not attempted — and is removed from
+  the header before landing.
 - Plans exist only in `proposed/`. Finding a plan beside an `implemented/` record
   means the work was recorded as shipped before its acceptance check ran.
 - Plans are edited freely — they are working state, not history.
-- Delete the plan in the same change that promotes its record to `implemented/`.
+- Delete the plan in the same change that promotes its records to `implemented/`.
   Git holds the history; a retained plan becomes a second source of rationale.
-- When the direction changes, the record is superseded and the old plan is deleted.
-  A plan never migrates to a different record.
+- When the direction changes, the records are superseded and the old plan is deleted.
+  A plan never migrates to different records.
 
 ## Moving between lifecycles
 
