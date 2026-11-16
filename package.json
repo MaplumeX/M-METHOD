@@ -1,0 +1,17 @@
+{
+  "name": "m-method",
+  "version": "0.1.0",
+  "description": "My own bundle of agent skills for software engineering.",
+  "keywords": [
+    "pi-package"
+  ],
+  "license": "MIT",
+  "pi": {
+    "skills": [
+      "./skills"
+    ]
+  },
+  "scripts": {
+    "list": "find skills -name SKILL.md | sort"
+  }
+}
