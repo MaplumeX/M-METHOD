@@ -66,10 +66,32 @@ already settled — what you can ask now without guessing at answers you have no
 heard. Ask the whole frontier in one round, then stop.
 
 ```
-❓ **Q1** — **<question title>**: <body, with options if there are options>
+❓ **Q1** — **<question title>**
+
+<one sentence of context>
+
+- **A.** <option> — <what it costs or buys>
+- **B.** <option> — <what it costs or buys>
+
+➡️ **A**, because <reason>.
+
+---
+
+❓ **Q2** — **<question title>**
+
+<context; no options — the answer is a fact about intent, not a design choice>
 
 ➡️ <your recommended answer>
 ```
+
+Give multiple options whenever the design space really has them: naming the options
+makes the question cheap to answer and shows what you considered. Write each option
+with its consequence, not just its name — the user is choosing a consequence, not a
+label. Skip the list when the answer is an intent, a number, or a fact about the
+world.
+
+Never present a set of equal options with no recommendation. A menu is a way of not
+deciding, and it moves the work back to the user without shrinking it.
 
 Word each question so that "yes" accepts your recommendation. A question that
 depends on another question still open in this round belongs to a later round, not
@@ -94,7 +116,7 @@ When the frontier is thin enough to see the shape of the answer:
   it builds on.
 - Always include the minimal option — the version that adds the least.
 - Mention an alternative only when a concrete tradeoff could change the user's
-  choice. A menu of three equal options is a way of not deciding.
+  choice. A menu of equal options is a way of not deciding.
 - Name the most fragile assumption: "This plan assumes X. If X does not hold, Y
   happens." If it is load-bearing, deform the design to survive its failure instead
   of planning on hope.
