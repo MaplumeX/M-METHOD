@@ -154,7 +154,7 @@ disclosing the failure.
   A vague gap is not an unknown; it is an unfinished plan, so loop back.
 
 If the decision is durable — expensive to reverse, or likely to be re-litigated —
-produce two artifacts, both only after the user approves them:
+it produces two artifacts:
 
 - `proposed/{class}/yyyy-mm-dd-title.md` — the record, per `.agents/ADR/AGENTS.md`.
 - `proposed/{class}/yyyy-mm-dd-title.plan.md` — the execution attachment, per
@@ -166,7 +166,18 @@ moves there after acceptance, when `mm-land` runs — not before.
 The plan file is also the handoff. When the user asks for one, or the environment
 cannot continue, write it rather than explaining why you stopped.
 
-The session ends when the frontier is empty. Do not write code until the user
-confirms you reached a shared understanding — unless they already authorized
-implementation for this same task ("直接做", "按你说的来"), in which case state
-which plan you are executing, check for drift since it was approved, and proceed.
+## Two gates
+
+The frontier is empty. What remains is two approvals, and the first does not imply
+the second.
+
+1. **Approve the plan.** Write the record and its plan file, then report both paths
+   and the plan's `## Verification` checklist. "可以", "行", "looks good" approve the
+   plan — nothing more.
+2. **Authorize implementation.** Do not read `mm-implement` and do not write any code
+   until the user explicitly says to start: "开工", "开始做", "implement it",
+   "按 plan 做".
+
+If implementation was already authorized before planning began ("直接做", "别问了"),
+both gates are passed — but write the two files first, state which plan you are
+executing, then proceed.
