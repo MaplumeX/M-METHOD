@@ -48,14 +48,14 @@ If the user says the work did not pass, do not land. Ask which line of the plan'
 5. Delete the plan:
 
    ```bash
-   git rm .agents/ADR/proposed/{class}/{name}.plan.md
+   rm .agents/ADR/proposed/{class}/{name}.plan.md
    ```
 
 6. Promote the record:
 
    ```bash
-   git mv .agents/ADR/proposed/{class}/{name}.md \
-          .agents/ADR/implemented/{class}/{name}.md
+   mv .agents/ADR/proposed/{class}/{name}.md \
+      .agents/ADR/implemented/{class}/{name}.md
    ```
 
    Then edit it, per `.agents/ADR/AGENTS.md`:
@@ -78,6 +78,8 @@ If the user says the work did not pass, do not land. Ask which line of the plan'
 
 8. Report the plan deleted, the record moved, the sections rewritten, the links
    repaired, and anything still owed — a PR, a release note, a follow-up record.
+   Leave the change uncommitted and say so; staging and committing it is the user's
+   call.
 
 ## Exit condition
 
