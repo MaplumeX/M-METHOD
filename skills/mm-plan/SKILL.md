@@ -177,6 +177,10 @@ it produces two artifacts:
 - `proposed/{class}/yyyy-mm-dd-<delivery-slug>.plan.md` — the execution attachment
   for all of them, in the first record's folder, per `references/plan-file.md`.
 
+A visual system decision — ramps, type and spacing scales, radius and elevation
+scales, component contracts, dark-mode strategy — is a `design` record. A single
+screen's layout is not a record; it stays in the plan.
+
 Never write an `implemented/` record for something that has not shipped. The record
 moves there after acceptance, when `mm-land` runs — not before.
 

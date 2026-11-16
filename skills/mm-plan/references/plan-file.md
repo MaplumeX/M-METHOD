@@ -103,6 +103,10 @@ The two or three things most likely to go wrong, and what the executor should do
 instead of guessing when they do. Include the point at which they must stop and ask
 rather than continue.
 
+Any visual delivery stops at the direction before step one: name the aesthetic, the
+signature and the interaction thesis, and wait. A plan that locks the direction after
+the markup exists has locked nothing.
+
 ## When the plan changes
 
 Plans are working state: edit them directly when a detail moves. Do not append a

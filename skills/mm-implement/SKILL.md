@@ -25,6 +25,11 @@ and record the deviation in the report.
 Read the plan and the record its `ADR:` line points to. The record is read-only
 here: it explains constraints, it does not authorize edits.
 
+The plan's `ADR:` records already exist when execution starts. A step that would
+have to create a record is a planning step that was left in the plan — stop and
+route it back to `mm-plan`. This is why a missing design system gets built during
+planning, not as step one of the delivery.
+
 ## Preflight
 
 - Walk `## Prerequisites`. Anything missing gets reported as missing — never mocked,
