@@ -20,16 +20,30 @@ skills/<skill-name>/scripts/
 skills/<skill-name>/references/
 ```
 
-## Dev loop
+## Install
 
-Install once, from this repo's parent directory:
+With the [skills CLI](https://skills.sh) — copies the skill directories:
 
 ```bash
-pi install /home/maplume/projects/M-METHOD
+npx skills add MaplumeX/M-METHOD -a pi        # into this project
+npx skills add MaplumeX/M-METHOD -a pi -g     # for every project
+npx skills add MaplumeX/M-METHOD -a pi --skill mm-plan   # just one
 ```
 
-Local packages are loaded from the resolved path without copying, so edits take
-effect on `/reload` — write and use from the same directory.
+Re-run to update; edit the installed copies freely. Drop `-a pi` to pick the agent
+interactively.
+
+## Dev loop
+
+While editing this repo, install it as a Pi package instead:
+
+```bash
+pi install /path/to/M-METHOD
+```
+
+Local packages load from the resolved path without copying, so edits take effect on
+`/reload` — write and use from the same directory. Use one of the two mechanisms,
+not both, or every skill is loaded twice under the same name.
 
 Then:
 
