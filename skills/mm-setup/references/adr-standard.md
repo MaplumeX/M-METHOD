@@ -183,6 +183,20 @@ Link text names the decision (`[the storage decision]`), not the action
 (`[see here]`). State the relationship in the sentence — supersedes, constrained by,
 deferred — because a link alone does not say whether two records agree.
 
+## References from code
+
+A comment references a record only when the code cannot explain its own constraint,
+and it leads with the consequence:
+
+```ts
+// Reads ordering before spawn. Dropping it silently disables range termination.
+// See ADR 2026-06-11-dev-invariants-over-deep-readonly.
+```
+
+Use `ADR <date>-<slug>`, not a path — paths break on lifecycle moves, the slug
+survives them. Never restate the rationale, and never put a record reference in a
+public API doc comment: that is a contract for callers, not history for maintainers.
+
 ## Language
 
 Paths, `Status:` values, and section headings stay in English — they are the
