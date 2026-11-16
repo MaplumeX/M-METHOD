@@ -1,0 +1,168 @@
+# ADR standard
+
+This directory holds decisions, not documentation. A record captures what was
+chosen, what was rejected, and what it cost — the parts code, tests, and docs
+cannot carry. If the answer is visible in the code, it does not belong here.
+
+## Layout and naming
+
+```
+.agents/ADR/{lifecycle}/{class}/yyyy-mm-dd-topic-title.md
+```
+
+Both axes live in the path, so the tree is the index. Never add an `INDEX.md`: it
+duplicates path metadata and makes unrelated note changes contend on one file.
+
+**Lifecycle** is the top-level folder, and the folder *is* the status:
+
+- `proposed/` — worth doing, not built yet (or only partly).
+- `implemented/` — shipped. Kept current with reality: when code moves a file,
+  renames a package, or changes a default, update the note's facts in the same
+  change. Facts only — never rewrite the decision itself.
+- `rejected/` — considered and declined. Create this folder only the first time a
+  tempting, plausible mistake needs its rationale preserved; otherwise delete the
+  proposal.
+- `archived/` — a frozen snapshot of an `implemented/` record that no longer guides
+  future work but still has historical value. Never current authority. Create it
+  when the first record enters it.
+
+**Class** is the kind of decision. The set is closed — adding one means editing
+this file:
+
+| Class | Covers |
+|---|---|
+| `architecture` | How modules relate, the vocabulary of the system, public seams. |
+| `feature` | A new user- or model-facing capability. |
+| `bug-fix` | Corrects a defect, or closes a gap that let one happen. |
+| `process` | Tooling, gates, workflow around the code — not runtime behavior. |
+
+The `bug-fix` / `feature` line: a bug fix restores behaviour that was already
+intended; if the intent itself is new, it is a `feature`. A fix that only changes
+the mechanism becomes a record when the defect's cause is worth not repeating.
+
+The date is when the topic was **first proposed**, per git history. Superseding a
+decision means adding a new file, never rewriting the old one into its opposite;
+keep both cross-linked.
+
+## File format
+
+The first three lines are exactly:
+
+```markdown
+# ADR: <title>
+
+Status: <status>
+```
+
+followed by a blank line. `Status:` must agree with the folder; the filename holds
+the proposal date, and the archive date is the one date recorded in the file:
+
+- `Status: proposed`
+- `Status: implemented`
+- `Status: rejected — <one line why>`
+- `Status: archived`
+
+For `archived/`, the line immediately below `Status: archived` is
+`Archived: YYYY-MM-DD`, and only then the blank line. Every other status is
+followed directly by the blank line.
+
+Body skeleton, by lifecycle.
+
+`proposed/`:
+
+```markdown
+## Problem
+## Proposal
+…bespoke sections…
+## Alternatives considered
+## Acceptance criteria
+## Risks
+```
+
+`implemented/`:
+
+```markdown
+## Problem
+## Decision
+…bespoke sections…
+## Alternatives considered
+## Consequences
+```
+
+`archived/` keeps the `implemented/` skeleton verbatim — archiving changes metadata
+only, never prose.
+
+`## Problem` is written to stand without the solution. `## Proposal` may speak in
+the future tense; `## Decision` describes shipped reality in the present tense.
+Proposal-era headings (`## Proposal`, `## Plan`, `## Acceptance criteria`, `## Risks`)
+must not survive into `implemented/` — fold them into `## Decision` and
+`## Consequences`.
+
+## Alternatives considered — mandatory
+
+Every record names each genuine alternative and why it lost: one bold-led paragraph
+per alternative, or a `### Why not <X>?` subsection for contested ones. Recorded,
+never invented. A decision written without what it beat invites re-litigation,
+which is the failure these records exist to prevent.
+
+## Moving between lifecycles
+
+Moving a file means updating `Status:` and re-satisfying that folder's skeleton in
+the same change. `proposed/` → `implemented/` rewrites `## Proposal` into a
+present-tense `## Decision` and folds `## Acceptance criteria` and `## Risks` into
+`## Consequences`. `proposed/` → `rejected/` only adds the reason to `Status:` and
+freezes the file. `implemented/` → `archived/` changes no prose at all — see
+[Archiving](#archiving).
+
+## Supersession and consolidation
+
+Superseding a decision adds a new record and cross-links both; it never rewrites the
+old file into its opposite, and never lets git history be the only copy of the old
+rationale.
+
+A fully superseded `implemented/` record may be consolidated into the current owner
+and deleted, but only when the owner preserves every unique rationale, alternative,
+consequence, required verification, and named coverage gap, and every inbound link
+is repaired. Partial supersession does not qualify: keep both, linked. Consolidation
+must not reverse the old decision's meaning.
+
+## Archiving
+
+Move a record to `archived/` only when its decision is fully shipped, its rationale
+is unlikely to guide future work, and it still has historical value. Keep it active
+instead when any of these is still load-bearing: alternatives, ownership boundaries,
+negative guarantees, durable or wire semantics, security rules, or conditions for
+reintroduction.
+
+Never archive a `proposed/` record — reject it. Delete rather than archive when the
+record covers only small UI adjustments or purely mechanical change.
+
+Archiving changes exactly two things: the file moves to `archived/{class}/`, and
+`Status: implemented` becomes:
+
+```markdown
+Status: archived
+Archived: YYYY-MM-DD
+```
+
+Nothing else in the file changes. An archived record keeps the `implemented/`
+skeleton, is permanently frozen — never edited, reformatted, moved, or deleted —
+and is not authority for current behaviour. Active records may still link into the
+archive when citing history.
+
+## Cross-references
+
+Link other records with relative markdown links, never bare numbers or prose:
+`[the storage decision](../architecture/2026-03-04-session-storage.md)`. Links stay
+mechanically checkable and survive moves between folders.
+
+## Language
+
+Paths, `Status:` values, and section headings stay in English — they are the
+machine-checked structure. Prose is written in the language you think in; mixing
+languages across records is fine, mixing heading vocabulary is not.
+
+## What not to record
+
+Local UI tweaks, purely mechanical refactors, and anything fully explained by the
+code or its tests. A small change is not exempt when it decides something durable.
