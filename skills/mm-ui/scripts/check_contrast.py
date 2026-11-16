@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""WCAG contrast checker for design tokens and hand-picked pairs.
+
+Usage:
+    check_contrast.py "#ffffff" "#333333"
+    check_contrast.py "#fff:#333" "#0055ff:#fff" --large
+    check_contrast.py --file pairs.txt
+
+Each pair is foreground:background. Exit code is 1 if any pair falls below the
+threshold, so it can gate a token change.
+
+Thresholds: 4.5:1 for body text, 3:1 for large text (>=18px, or >=14px bold).
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+
+BODY = 4.5
+LARGE = 3.0
+
+
+def parse_color(value: str) -> tuple[int, int, int]:
+    v = value.strip().lower()
+    if v.startswith("#"):
+        v = v[1:]
+    if len(v) == 3:
+        v = "".join(c * 2 for c in v)
+    if len(v) == 6:
+        try:
+            return tuple(int(v[i : i + 2], 16) for i in (0, 2, 4))  # type: ignore[return-value]
+        except ValueError:
+            pass
+    if v.startswith("rgb(") and v.endswith(")"):
+        parts = [p.strip() for p in v[4:-1].split(",")]
+        if len(parts) == 3:
+            return tuple(int(p) for p in parts)  # type: ignore[return-value]
+    raise ValueError(f"cannot parse color: {value!r}")
+
+
+def channel(c: int) -> float:
+    s = c / 255
+    return s / 12.92 if s <= 0.03928 else ((s + 0.055) / 1.055) ** 2.4
+
+
+def luminance(rgb: tuple[int, int, int]) -> float:
+    r, g, b = (channel(c) for c in rgb)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast(a: tuple[int, int, int], b: tuple[int, int, int]) -> float:
+    la, lb = luminance(a), luminance(b)
+    hi, lo = max(la, lb), min(la, lb)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="WCAG contrast checker")
+    ap.add_argument("pairs", nargs="*", help='pairs as "fg:bg" or two bare colors')
+    ap.add_argument("--file", help="file with one fg:bg per line")
+    ap.add_argument("--large", action="store_true", help="use the 3:1 large-text threshold")
+    args = ap.parse_args()
+
+    raw: list[str] = list(args.pairs)
+    if args.file:
+        with open(args.file, encoding="utf-8") as fh:
+            raw += [line.strip() for line in fh.read().splitlines() if line.strip()]
+
+    if len(raw) == 2 and ":" not in raw[0] and ":" not in raw[1]:
+        raw = [f"{raw[0]}:{raw[1]}"]
+
+    if not raw:
+        ap.print_help()
+        return 2
+
+    threshold = LARGE if args.large else BODY
+    failed = 0
+    print(f"threshold: {threshold}:1 ({'large' if args.large else 'body'})")
+    for item in raw:
+        if ":" not in item:
+            print(f"  skip (expected fg:bg): {item}")
+            continue
+        fg_s, bg_s = item.split(":", 1)
+        try:
+            fg, bg = parse_color(fg_s), parse_color(bg_s)
+        except ValueError as exc:
+            print(f"  skip: {exc}")
+            continue
+        r = contrast(fg, bg)
+        ok = r >= threshold
+        if not ok:
+            failed += 1
+        print(f"  {fg_s:>9} on {bg_s:<9} {r:5.2f}:1  {'pass' if ok else 'FAIL'}")
+
+    if failed:
+        print(f"{failed} pair(s) below threshold")
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
