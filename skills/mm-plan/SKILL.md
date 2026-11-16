@@ -1,6 +1,6 @@
 ---
 name: mm-plan
-description: Turn a rough idea into an approved, decision-complete plan by interrogating the user round by round. Use when the user wants to plan, design, stress-test, or judge whether to build something — 出方案、怎么设计、值不值得、有没有必要 — or asks how they should approach a change. Not for bug fixes, error diagnosis, or small edits.
+description: Turn a rough idea into an approved, decision-complete plan by interrogating the user round by round. Use when the user wants to plan, stress-test, or judge whether to build something — 出方案、怎么做、值不值得、有没有必要 — or asks how to implement a change. Not for visual design (that is mm-ui), bug fixes, error diagnosis, or small edits.
 ---
 
 # Plan
@@ -182,6 +182,10 @@ moves there after acceptance, when `mm-land` runs — not before.
 
 The plan file is also the handoff. When the user asks for one, or the environment
 cannot continue, write it rather than explaining why you stopped.
+
+If the plan touches a visual surface, its steps name the mm-ui mode that will run them
+(System, Build, Refine). Planning owns what to build and in what order; the direction
+lock happens inside mm-ui, with the user, before any markup.
 
 ## Two gates
 

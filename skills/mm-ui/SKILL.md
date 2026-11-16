@@ -67,6 +67,10 @@ passes; the record exists.
 
 **Enters when**: a new page, component, or feature block.
 
+If the work needs a plan first (a new feature, more than one page), the plan owns the
+information architecture and the step order; this mode owns the direction and the
+execution.
+
 The order is the method. Out of order produces over-decorated, under-structured
 screens.
 
