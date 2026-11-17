@@ -24,7 +24,7 @@ directory, the component library in `package.json`. Read all of it before asking
 
 ## 2 · Color: nine steps from a base
 
-Don't hand-pick hex values. Follow §5.3:
+Don't hand-pick hex values. Follow §5.3 (use `scripts/generate_ramp.py --name <group> --base <color>` or `--neutral cool|warm` to derive all nine steps programmatically):
 
 ```
 base (500) → edges (900 / 100) → midpoints (700 / 300) → the rest (800 / 600 / 400 / 200)
@@ -145,7 +145,8 @@ For a Tailwind expression see `12-tailwind.md` — an optional mapping, never a 
 
 - [ ] Every foreground/background pair passes in light mode **and dark mode (if enabled)**:
       body 4.5:1, large 3:1 (`python3 scripts/check_contrast.py`, or `--file pairs.txt`)
-- [ ] Nine steps per ramp, with no "temporary tenth step" (§5.3.5)
+- [ ] Nine steps per ramp, generated via §5.3 (`scripts/generate_ramp.py`) and verified
+      with `scripts/check_ui_rules.py --tokens`, with no "temporary tenth step" (§5.3.5)
 - [ ] Greys are neither pure grey nor pure black/white (§5.2.1 §5.5); dark surface is not `#000`
 - [ ] Typography (family, size, weight `>=400`, line height), spacing, control heights,
       radius, elevation, border widths, z-index, and motion all sit on their scales with no

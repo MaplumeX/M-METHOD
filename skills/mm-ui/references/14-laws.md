@@ -41,11 +41,14 @@ Pass these before any UI delivery:
 - **No unconstrained content width.** Even when a sidebar is fixed and the main area
   flexes (`§3.4.1`), primary content and prose must declare a `max-width` (`§3.3`,
   `§4.3`: 45–75 characters) unless explicitly justified (`§3.3.3`).
-- **Static rules pass.** Run `scripts/check_ui_rules.py` (exit 0) to catch spacing/type
-  off-scale values, loose heading line-height, `center`-aligned text rows (`§4.4`), flat
-  inputs (`§6.1.3`), and banned motion properties (`15-direction.md`).
-- **Colors are placeholders until confirmed.** Don't default to indigo and gray because an
-  example used them — that is the most recognizable tell of machine-generated UI.
+- **Static rules & deliverable gates pass.** Run `scripts/check_ui_rules.py` (exit 0) for
+  spacing/type scales, heading line-height, `center`-aligned text rows (`§4.4`), flat
+  inputs (`§6.1.3`), and motion bans; use `--tokens` on `tokens.*` (`§5.3`–`§5.5` ramps),
+  `--pass1` on grayscale Pass 1, `--brief` on the 3-line direction + 6-item brief, and
+  `--report` on the final delivery summary.
+- **Colors are generated, not guessed.** Build 9-step ramps programmatically via
+  `scripts/generate_ramp.py` (`§5.3`, `§5.4`) and verify with `check_contrast.py` +
+  `check_ui_rules.py --tokens`. Never default to indigo and gray.
 - **Contrast is measured, not eyeballed.** 4.5:1 / 3:1 via `scripts/check_contrast.py`, or
   say why it wasn't. `§5.6`
 - **One primary action per screen.** `§2.8`
@@ -53,7 +56,7 @@ Pass these before any UI delivery:
 - **Visual claims require looking at contrasts.** Build requires `1440px` wide + `400px`
   narrow + empty-state screenshots (plus grayscale/sibling comparison); Refine requires
   before/after screenshots. Never declare quality from a single screenshot without a
-  reference. If the page was not rendered, say the audit was static only.
+  reference. If the page was not rendered, explicitly list every unverified visual item.
 
 ## Leveling up (§9)
 

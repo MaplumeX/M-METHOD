@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
-"""Static UI rule gate for mm-ui (§2.2.b, §3.2, §3.3, §4.1, §4.3, §4.4, §4.5, §6.1.3, motion bans).
+"""Static UI rule gate for mm-ui (§2.2.b, §3.2, §3.3, §4.1, §4.3, §4.4, §4.5, §5.3–§5.5, §6.1.3, Build gates).
 
 Checks CSS files and <style> blocks inside HTML/Vue/Svelte files against
-mechanically verifiable Refactoring UI / M-METHOD rules.
+mechanically verifiable Refactoring UI / M-METHOD rules, plus optional gates
+for System token ramps (--tokens), Pass 1 grayscale purity (--pass1),
+Build 3-line direction + 6-item constraint brief (--brief), and final
+delivery report (--report).
 
 Usage:
-    check_ui_rules.py path/to/styles.css
     check_ui_rules.py src/
-    check_ui_rules.py src/ --strict
+    check_ui_rules.py src/ --pass1
+    check_ui_rules.py src/ --brief src/App.css
+    check_ui_rules.py --tokens tokens.css
+    check_ui_rules.py --report report.md
 
 Exemptions:
     Add a CSS comment on the same line, immediately above the declaration/rule,
@@ -24,11 +29,16 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import colorsys
+import json
 import os
 import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from check_contrast import parse_color  # noqa: E402
 
 STYLE_EXTENSIONS = {".css", ".scss", ".less"}
 MARKUP_EXTENSIONS = {".html", ".htm", ".vue", ".svelte"}
@@ -389,7 +399,12 @@ def _is_large_font_size(val: str) -> bool:
     return False
 
 
-def check_rules_in_file(file_path: str, rules: list[Rule], allows_by_line: dict[int, list[tuple[str, str]]]) -> list[Finding]:
+def check_rules_in_file(
+    file_path: str,
+    rules: list[Rule],
+    allows_by_line: dict[int, list[tuple[str, str]]],
+    pass1: bool = False,
+) -> list[Finding]:
     findings: list[Finding] = []
     is_tokens_file = Path(file_path).name.startswith("tokens")
 
@@ -641,6 +656,38 @@ def check_rules_in_file(file_path: str, rules: list[Rule], allows_by_line: dict[
                                 )
                                 break
 
+        # 10. Pass 1 grayscale purity (§1.2.1): ban accent/status tokens and decorative non-inset shadows
+        if pass1:
+            for d in rule.declarations:
+                val_lower = d.value.lower()
+                if ("--accent" in val_lower or "--status-" in val_lower) and not _is_allowed(
+                    rule, allows_by_line, d.line, "§1.2.1"
+                ):
+                    findings.append(
+                        Finding(
+                            severity="ERROR",
+                            rule_id="§1.2.1",
+                            code="pass1-color-leak",
+                            file=file_path,
+                            line=d.line,
+                            selector=sel,
+                            message=f"Pass 1 must stay grayscale; found accent/status token in '{d.prop}: {d.value}'",
+                        )
+                    )
+                if d.prop == "box-shadow" and val_lower not in ("none", "0") and "inset" not in val_lower:
+                    if not _is_allowed(rule, allows_by_line, d.line, "§1.2.1"):
+                        findings.append(
+                            Finding(
+                                severity="ERROR",
+                                rule_id="§1.2.1",
+                                code="pass1-shadow-leak",
+                                file=file_path,
+                                line=d.line,
+                                selector=sel,
+                                message="Pass 1 must stay flat/grayscale; defer decorative box-shadow to Pass 2 (§6)",
+                            )
+                        )
+
     # File-level check: asymmetric measure (empty state has measure, primary content lacks max-width)
     if empty_selectors_with_measure and content_selectors_without_measure:
         already_reported = {
@@ -684,7 +731,7 @@ def check_rules_in_file(file_path: str, rules: list[Rule], allows_by_line: dict[
     return findings
 
 
-def scan_path(target: Path) -> list[Finding]:
+def scan_path(target: Path, pass1: bool = False) -> list[Finding]:
     files: list[Path] = []
     if target.is_file():
         files.append(target)
@@ -702,23 +749,307 @@ def scan_path(target: Path) -> list[Finding]:
         ext = path.suffix.lower()
         if ext in STYLE_EXTENSIONS:
             rules, allows = parse_css_rules(text, start_line=1)
-            all_findings.extend(check_rules_in_file(str(path), rules, allows))
+            all_findings.extend(check_rules_in_file(str(path), rules, allows, pass1=pass1))
         elif ext in MARKUP_EXTENSIONS:
             for match in STYLE_BLOCK_RE.finditer(text):
                 style_text = match.group(1)
                 start_line = text[: match.start(1)].count("\n") + 1
                 rules, allows = parse_css_rules(style_text, start_line=start_line)
-                all_findings.extend(check_rules_in_file(str(path), rules, allows))
+                all_findings.extend(check_rules_in_file(str(path), rules, allows, pass1=pass1))
     return all_findings
+
+
+def _rgb_to_hsl(rgb: tuple[int, int, int]) -> tuple[float, float, float]:
+    r, g, b = (c / 255.0 for c in rgb)
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    return (h * 360.0, s * 100.0, l * 100.0)
+
+
+def check_tokens_file(path: Path) -> list[Finding]:
+    """Validate 9-step color ramps in tokens.css or tokens.json (§5.2.1, §5.3, §5.4, §5.5.1)."""
+    findings: list[Finding] = []
+    text = path.read_text(encoding="utf-8", errors="replace")
+    ramps: dict[str, dict[int, tuple[str, int]]] = {}
+
+    if path.suffix.lower() == ".json":
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError as exc:
+            return [Finding("ERROR", "§5.3", "invalid-tokens-json", str(path), 1, "tokens.json", f"invalid JSON: {exc}")]
+
+        def walk_json(obj: object, prefix: str = "") -> None:
+            if not isinstance(obj, dict):
+                return
+            step_keys = {k: v for k, v in obj.items() if re.fullmatch(r"\d{2,3}", str(k)) and isinstance(v, str)}
+            if step_keys and prefix:
+                for k, v in step_keys.items():
+                    ramps.setdefault(prefix, {})[int(k)] = (v, 1)
+                return
+            for k, v in obj.items():
+                walk_json(v, k if not prefix else f"{prefix}.{k}")
+
+        walk_json(data)
+    else:
+        for lineno, line in enumerate(text.splitlines(), 1):
+            m = re.search(r"--(?:color-)?([a-zA-Z0-9_-]+)-(\d{2,3})\s*:\s*([^;]+);", line)
+            if m:
+                group, step_s, val = m.group(1), m.group(2), m.group(3).strip()
+                if val.startswith("var("):
+                    continue
+                ramps.setdefault(group, {})[int(step_s)] = (val, lineno)
+
+    if not ramps:
+        findings.append(
+            Finding("ERROR", "§5.3", "no-color-ramps", str(path), 1, "tokens", "no 9-step color ramps (--color-<group>-100..900) found")
+        )
+        return findings
+
+    expected_steps = {100, 200, 300, 400, 500, 600, 700, 800, 900}
+    for group, steps in sorted(ramps.items()):
+        extra_steps = set(steps.keys()) - expected_steps
+        # Allow optional 50/950 only on neutral/grey (e.g. dark surface neutral-950 per 13-beyond.md)
+        if group.lower() in ("neutral", "gray", "grey"):
+            extra_steps -= {50, 950}
+        missing_steps = expected_steps - set(steps.keys())
+        first_line = min(ln for _, ln in steps.values())
+
+        if missing_steps:
+            findings.append(
+                Finding(
+                    "ERROR",
+                    "§5.3",
+                    "incomplete-ramp",
+                    str(path),
+                    first_line,
+                    group,
+                    f"ramp '{group}' missing step(s) {sorted(missing_steps)}; build 9 steps (100..900) via generate_ramp.py",
+                )
+            )
+            continue
+        if extra_steps:
+            findings.append(
+                Finding(
+                    "ERROR",
+                    "§5.3.5",
+                    "extra-ramp-step",
+                    str(path),
+                    first_line,
+                    group,
+                    f"ramp '{group}' has unallowed extra step(s) {sorted(extra_steps)}; resist adding steps outside 100..900",
+                )
+            )
+
+        hsl_steps: dict[int, tuple[float, float, float, int]] = {}
+        for step in sorted(expected_steps):
+            val, ln = steps[step]
+            try:
+                rgb = parse_color(val)
+            except ValueError:
+                findings.append(
+                    Finding("ERROR", "§5.3", "unparseable-ramp-color", str(path), ln, f"{group}-{step}", f"cannot parse color {val!r}")
+                )
+                continue
+            if rgb in ((0, 0, 0), (255, 255, 255)):
+                findings.append(
+                    Finding(
+                        "ERROR",
+                        "§5.2.1",
+                        "pure-bw-in-ramp",
+                        str(path),
+                        ln,
+                        f"{group}-{step}",
+                        "ramp step uses pure #000000 or #ffffff; edges must remain off-black / off-white",
+                    )
+                )
+            h, s, l = _rgb_to_hsl(rgb)
+            hsl_steps[step] = (h, s, l, ln)
+
+        if len(hsl_steps) == 9:
+            ordered = [hsl_steps[s] for s in sorted(expected_steps)]
+            for idx in range(len(ordered) - 1):
+                if ordered[idx][2] <= ordered[idx + 1][2]:
+                    s_cur = sorted(expected_steps)[idx]
+                    s_nxt = sorted(expected_steps)[idx + 1]
+                    findings.append(
+                        Finding(
+                            "ERROR",
+                            "§5.3",
+                            "non-monotonic-ramp",
+                            str(path),
+                            ordered[idx + 1][3],
+                            f"{group}-{s_cur}->{s_nxt}",
+                            f"lightness is not strictly decreasing ({ordered[idx][2]:.1f}% -> {ordered[idx + 1][2]:.1f}%)",
+                        )
+                    )
+                    break
+
+            if group.lower() in ("neutral", "gray", "grey") and all(v[1] < 1.0 for v in ordered):
+                findings.append(
+                    Finding(
+                        "ERROR",
+                        "§5.5.1",
+                        "achromatic-neutral",
+                        str(path),
+                        first_line,
+                        group,
+                        "neutral ramp has ~0% saturation everywhere; add cool or warm hue tint (§5.5.1)",
+                    )
+                )
+
+            s500, l500 = hsl_steps[500][1], hsl_steps[500][2]
+            if s500 > 15.0:
+                for edge in (100, 900):
+                    _, s_edge, l_edge, ln_edge = hsl_steps[edge]
+                    if abs(l_edge - 50.0) > abs(l500 - 50.0) and s_edge < s500 * 0.65 and s_edge < 90.0:
+                        findings.append(
+                            Finding(
+                                "WARN",
+                                "§5.4",
+                                "washed-out-edge",
+                                str(path),
+                                ln_edge,
+                                f"{group}-{edge}",
+                                f"edge saturation ({s_edge:.0f}%) dropped far below 500 ({s500:.0f}%); raise saturation as lightness leaves 50% (§5.4)",
+                            )
+                        )
+    return findings
+
+
+BRIEF_REQUIRED_KEYS = (
+    ("Visual thesis:", "15-direction", "missing 'Visual thesis:' direction line"),
+    ("Content plan:", "15-direction", "missing 'Content plan:' direction line"),
+    ("Interaction thesis:", "15-direction", "missing 'Interaction thesis:' direction line"),
+    ("Rules read:", "Read Gate", "missing 'Rules read:' citation line"),
+    ("Canvas & measure:", "§3.3 / §4.3", "missing 'Canvas & measure:' constraint"),
+    ("Type & leading:", "§4.1 / §4.5", "missing 'Type & leading:' constraint"),
+    ("Density & spacing:", "§3.1.2 / §3.6", "missing 'Density & spacing:' constraint"),
+    ("Alignment & depth:", "§4.4 / §6.1.3", "missing 'Alignment & depth:' constraint"),
+    ("Hierarchy & empty state:", "§2.1 / §8.4", "missing 'Hierarchy & empty state:' constraint"),
+)
+REQUIRED_BUILD_LENSES = ("02", "03", "04", "06", "10", "15")
+
+
+def check_brief_files(paths: list[Path]) -> list[Finding]:
+    """Verify the 3-line direction + 6-item Constraint Brief schema and Read Gate citations."""
+    combined_parts: list[str] = []
+    for p in paths:
+        combined_parts.append(p.read_text(encoding="utf-8", errors="replace"))
+    combined = "\n".join(combined_parts)
+    ref_file = str(paths[0])
+    findings: list[Finding] = []
+
+    for key, rule_id, msg in BRIEF_REQUIRED_KEYS:
+        m = re.search(rf"^\s*(?:[/*#-]*\s*)?{re.escape(key)}\s*(.*)$", combined, re.IGNORECASE | re.MULTILINE)
+        if not m or not m.group(1).strip():
+            findings.append(Finding("ERROR", rule_id, "missing-brief-key", ref_file, 1, key, msg))
+
+    rules_match = re.search(r"Rules read:\s*(.+)", combined, re.IGNORECASE)
+    if rules_match:
+        rules_val = rules_match.group(1)
+        missing_lenses = [lens for lens in REQUIRED_BUILD_LENSES if not re.search(rf"\b{lens}(?:-[\w]+)?\b", rules_val)]
+        if missing_lenses:
+            findings.append(
+                Finding(
+                    "ERROR",
+                    "Read Gate",
+                    "missing-lens-read",
+                    ref_file,
+                    1,
+                    "Rules read",
+                    f"Rules read is missing required Build lens reference(s): {', '.join(missing_lenses)} (expected 02, 03, 04, 06, 10, 15)",
+                )
+            )
+        if "§" not in rules_val:
+            findings.append(
+                Finding(
+                    "ERROR",
+                    "Read Gate",
+                    "missing-rule-citation",
+                    ref_file,
+                    1,
+                    "Rules read",
+                    "Rules read must cite concrete §id values extracted from the lens files",
+                )
+            )
+    return findings
+
+
+def check_report_file(path: Path) -> list[Finding]:
+    """Verify non-CSS delivery obligations in a final Build/Review report."""
+    text = sys.stdin.read() if str(path) == "-" else path.read_text(encoding="utf-8", errors="replace")
+    label = "<stdin>" if str(path) == "-" else str(path)
+    findings: list[Finding] = []
+
+    if not re.search(r"§\d+(?:\.\d+)*", text):
+        findings.append(
+            Finding(
+                "ERROR",
+                "Build Gate 4",
+                "missing-traceability",
+                label,
+                1,
+                "report",
+                "delivery report has 0 §id rule traceability citations",
+            )
+        )
+
+    verdicts = re.findall(r"\b(Clear|Hit)\b", text, re.IGNORECASE)
+    if len(verdicts) < 5 or not re.search(r"AI\s+Slop\s+Test", text, re.IGNORECASE):
+        findings.append(
+            Finding(
+                "ERROR",
+                "15-direction",
+                "incomplete-slop-test",
+                label,
+                1,
+                "AI Slop Test",
+                "report must include 'AI Slop Test' with all 5 reflex checks marked Clear or Hit",
+            )
+        )
+
+    headless_claim = re.search(r"(无浏览器|无法渲染|未渲染|no browser|cannot render|static only)", text, re.IGNORECASE)
+    if headless_claim:
+        has_unverified_list = re.search(r"(未核验|unverified)", text, re.IGNORECASE) and re.search(
+            r"^\s*(?:[-*]|\d+\.)\s+\S+", text, re.MULTILINE
+        )
+        if not has_unverified_list:
+            findings.append(
+                Finding(
+                    "ERROR",
+                    "Visual Evidence",
+                    "missing-unverified-list",
+                    label,
+                    1,
+                    "Visual Evidence",
+                    "headless/static claim requires an explicit bulleted list of unverified visual items ('未核验项')",
+                )
+            )
+    return findings
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Static UI rule checker for mm-ui")
-    ap.add_argument("paths", nargs="+", help="CSS/HTML/Vue/Svelte files or directories to scan")
+    ap.add_argument("paths", nargs="*", help="CSS/HTML/Vue/Svelte files or directories to scan")
     ap.add_argument("--strict", action="store_true", help="treat warnings as failures (exit 1)")
+    ap.add_argument("--pass1", action="store_true", help="enforce Pass 1 grayscale purity (no accent/status/shadows)")
+    ap.add_argument("--tokens", metavar="FILE", help="validate 9-step color ramps in tokens.css or tokens.json")
+    ap.add_argument("--brief", nargs="+", metavar="FILE", help="validate 3-line direction + 6-item constraint brief")
+    ap.add_argument("--report", metavar="FILE", help="validate delivery report (§id traceability, 5-item AI Slop Test, unverified items)")
     args = ap.parse_args()
 
-    missing = [p for p in args.paths if not Path(p).exists()]
+    if not args.paths and not args.tokens and not args.brief and not args.report:
+        ap.print_help()
+        return 2
+
+    check_exists: list[str] = list(args.paths)
+    if args.tokens:
+        check_exists.append(args.tokens)
+    if args.brief:
+        check_exists.extend(args.brief)
+    if args.report and args.report != "-":
+        check_exists.append(args.report)
+
+    missing = [p for p in check_exists if not Path(p).exists()]
     if missing:
         for p in missing:
             print(f"error: path not found: {p}", file=sys.stderr)
@@ -726,7 +1057,13 @@ def main() -> int:
 
     findings: list[Finding] = []
     for raw_path in args.paths:
-        findings.extend(scan_path(Path(raw_path)))
+        findings.extend(scan_path(Path(raw_path), pass1=args.pass1))
+    if args.tokens:
+        findings.extend(check_tokens_file(Path(args.tokens)))
+    if args.brief:
+        findings.extend(check_brief_files([Path(p) for p in args.brief]))
+    if args.report:
+        findings.extend(check_report_file(Path(args.report)))
 
     errors = [f for f in findings if f.severity == "ERROR"]
     warnings = [f for f in findings if f.severity == "WARN"]
