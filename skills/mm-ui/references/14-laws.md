@@ -38,13 +38,22 @@ Pass these before any UI delivery:
 
 - **No arbitrary values.** Every size, spacing and color is a token or a scale step. A
   missing step *is* the finding. `§1.5`
+- **No unconstrained content width.** Even when a sidebar is fixed and the main area
+  flexes (`§3.4.1`), primary content and prose must declare a `max-width` (`§3.3`,
+  `§4.3`: 45–75 characters) unless explicitly justified (`§3.3.3`).
+- **Static rules pass.** Run `scripts/check_ui_rules.py` (exit 0) to catch spacing/type
+  off-scale values, loose heading line-height, `center`-aligned text rows (`§4.4`), flat
+  inputs (`§6.1.3`), and banned motion properties (`15-direction.md`).
 - **Colors are placeholders until confirmed.** Don't default to indigo and gray because an
   example used them — that is the most recognizable tell of machine-generated UI.
-- **Contrast is measured, not eyeballed.** 4.5:1 / 3:1, or say why it wasn't. `§5.6`
+- **Contrast is measured, not eyeballed.** 4.5:1 / 3:1 via `scripts/check_contrast.py`, or
+  say why it wasn't. `§5.6`
 - **One primary action per screen.** `§2.8`
 - **Anything that can be empty has an empty state.** `§8.4`
-- **Visual claims require looking.** If the page was not rendered, say the audit was static
-  only.
+- **Visual claims require looking at contrasts.** Build requires `1440px` wide + `400px`
+  narrow + empty-state screenshots (plus grayscale/sibling comparison); Refine requires
+  before/after screenshots. Never declare quality from a single screenshot without a
+  reference. If the page was not rendered, say the audit was static only.
 
 ## Leveling up (§9)
 
