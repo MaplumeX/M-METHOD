@@ -41,11 +41,13 @@ Pass these before any UI delivery:
 - **No unconstrained content width.** Even when a sidebar is fixed and the main area
   flexes (`§3.4.1`), primary content and prose must declare a `max-width` (`§3.3`,
   `§4.3`: 45–75 characters) unless explicitly justified (`§3.3.3`).
-- **Static rules & deliverable gates pass.** Run `scripts/check_ui_rules.py` (exit 0) for
+- **Static rules & deliverable gates pass.** Run `scripts/check_ui_rules.py` (scans
+  `.css/.scss/.less/.tsx/.jsx/.html/.vue/.svelte`, fails on 0 scanned files, exit 0) for
   spacing/type scales, heading line-height, `center`-aligned text rows (`§4.4`), flat
-  inputs (`§6.1.3`), and motion bans; use `--tokens` on `tokens.*` (`§5.3`–`§5.5` ramps),
-  `--pass1` on grayscale Pass 1, `--brief` on the 3-line direction + 6-item brief, and
-  `--report` on the final delivery summary.
+  inputs (`§6.1.3`), dark-mode overrides (`13-beyond.md`), and motion bans; use `--tokens`
+  on `tokens.*` (`§5.3`–`§5.5` ramps), `--pass1` per new surface, `--brief` on the 9-key
+  brief (requiring `02/03/04/06/08/09/10/15`), and `--report` on the final delivery
+  summary.
 - **Colors are generated, not guessed.** Build 9-step ramps programmatically via
   `scripts/generate_ramp.py` (`§5.3`, `§5.4`) and verify with `check_contrast.py` +
   `check_ui_rules.py --tokens`. Never default to indigo and gray.

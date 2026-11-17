@@ -36,7 +36,7 @@ description: 提炼自《Refactoring UI》的 Web UI 设计规则与工作流。
 | 排查条件 | 模式 | 必读剧本与透镜（Read Gate） | 必跑脚本门禁 |
 |---|---|---|---|
 | 尚无或需替换设计系统 | **System** | [`mode-system.md`](references/mode-system.md) + `11-tokens.md`、`05-color.md` | `generate_ramp.py` + `check_contrast.py` + `check_ui_rules.py --tokens` |
-| 新增页面 / 组件 / 区块 | **Build** | [`mode-build.md`](references/mode-build.md) + `02`、`03`、`04`、`06`、`10`、`15` | `check_ui_rules.py --pass1` → 终检（含 `--brief`、`--report`、`check_contrast.py`） |
+| 新增页面 / 组件 / 区块 | **Build** | [`mode-build.md`](references/mode-build.md) + `02`、`03`、`04`、`06`、`08`、`09`、`10`、`15` | `check_ui_rules.py --pass1` → 终检（含 `--brief`、`--report`、`check_contrast.py`） |
 | 修改现有界面 | **Refine** | [`mode-refine-review.md`](references/mode-refine-review.md) + `09-antipatterns.md` + 命中透镜 | `check_ui_rules.py`（改配色补 `check_contrast.py`） |
 | 只给意见不改代码 | **Review** | [`mode-refine-review.md`](references/mode-refine-review.md) + `09-antipatterns.md`、`15-direction.md` | 可选静态扫描 + 5 项 AI Slop Test（只读不改） |
 

@@ -42,10 +42,45 @@ from check_contrast import parse_color  # noqa: E402
 
 STYLE_EXTENSIONS = {".css", ".scss", ".less"}
 MARKUP_EXTENSIONS = {".html", ".htm", ".vue", ".svelte"}
+JSX_EXTENSIONS = {".tsx", ".jsx"}
+ALL_SCAN_EXTENSIONS = STYLE_EXTENSIONS | MARKUP_EXTENSIONS | JSX_EXTENSIONS
 SKIP_DIRS = {"node_modules", ".git", "dist", "build", ".next", ".turbo", "coverage", "__pycache__"}
 
 SPACING_SCALE_PX = {4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256, 384, 512, 640, 768}
 TYPE_SCALE_PX = {12, 14, 16, 18, 20, 24, 30, 36, 48, 60, 72}
+
+PASS1_CHROMATIC_RE = re.compile(
+    r"^(?:[a-z0-9-]+:)*(?:bg|text|border|ring|fill|stroke|from|via|to)-(?:"
+    r"accent(?:-[\w-]+)?|status-[\w-]+|primary(?:-[\w-]+)?|danger(?:-[\w-]+)?|"
+    r"success(?:-[\w-]+)?|warning(?:-[\w-]+)?|info(?:-[\w-]+)?|"
+    r"(?:indigo|blue|sky|cyan|teal|emerald|green|lime|yellow|amber|orange|red|rose|pink|fuchsia|purple|violet)-\d+"
+    r")$",
+    re.IGNORECASE,
+)
+PASS1_SHADOW_RE = re.compile(
+    r"^(?:[a-z0-9-]+:)*shadow(?:-(?:2xs|xs|sm|md|lg|xl|2xl|\d+|\[[^\]]+\]))?$",
+    re.IGNORECASE,
+)
+ARBITRARY_SPACING_TYPE_RE = re.compile(
+    r"^(?:[a-z0-9-]+:)*(?P<prefix>p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y|space-x|space-y|text)-\[(?P<inner>[^\]]+)\]$",
+    re.IGNORECASE,
+)
+RAW_HEX_CLASS_RE = re.compile(
+    r"^(?:[a-z0-9-]+:)*(?:bg|text|border|ring|fill|stroke|from|via|to)-\[#[0-9a-f]{3,8}\]$",
+    re.IGNORECASE,
+)
+DARK_PREFIX_RE = re.compile(r"^dark:", re.IGNORECASE)
+OUTLINE_NONE_RE = re.compile(r"^(?:[a-z0-9-]+:)*outline-(?:none|0)$", re.IGNORECASE)
+FOCUS_REPLACEMENT_RE = re.compile(r"^focus(?:-visible)?:(?:ring|outline)", re.IGNORECASE)
+LIGHT_WEIGHT_CLASS_RE = re.compile(r"^(?:[a-z0-9-]+:)*font-(?:thin|extralight|light)$", re.IGNORECASE)
+LARGE_TEXT_CLASS_RE = re.compile(r"^(?:[a-z0-9-]+:)*text-(?:2xl|3xl|4xl|5xl|6xl|7xl|8xl|9xl|display)$", re.IGNORECASE)
+LOOSE_LEADING_CLASS_RE = re.compile(r"^(?:[a-z0-9-]+:)*leading-(?:normal|relaxed|loose|\[1\.[4-9]\d*\]|\[[2-9](?:\.\d+)?\])$", re.IGNORECASE)
+ROW_CLASS_HINT_RE = re.compile(r"^(?:[\w-]+-)?(?:row|header|list-item|title-bar|meta)$", re.IGNORECASE)
+EXEMPT_CLASS_HINT_RE = re.compile(
+    r"^(?:[\w-]+-)?(?:btn|button|badge|pill|chip|tag|icon|avatar|switch|toggle|spinner|loader|nav-item|tab|empty)$",
+    re.IGNORECASE,
+)
+CONTENT_CLASS_HINT_RE = re.compile(r"^(?:[\w-]+-)?(?:main|content|page-content|list|feed|prose|thread|body-copy)$", re.IGNORECASE)
 
 LAYOUT_ANIM_PROPS = {
     "width",
@@ -731,22 +766,298 @@ def check_rules_in_file(
     return findings
 
 
-def scan_path(target: Path, pass1: bool = False) -> list[Finding]:
+def _collect_line_allows(text: str) -> dict[int, set[str]]:
+    """Collect mm-ui-allow rule IDs from CSS, JS/TS (//), and HTML comments per line."""
+    allows: dict[int, set[str]] = {}
+    for lineno, line in enumerate(text.splitlines(), 1):
+        for m in ALLOW_RE.finditer(line):
+            allows.setdefault(lineno, set()).add(m.group(1))
+    return allows
+
+
+def _utility_allowed(allows_by_line: dict[int, set[str]], line: int, *rule_ids: str) -> bool:
+    for ln in (line, line - 1):
+        allowed = allows_by_line.get(ln, set())
+        if any(rid in allowed for rid in rule_ids):
+            return True
+    return False
+
+
+def _extract_class_attributes(text: str) -> list[tuple[int, str, str, list[str]]]:
+    """Extract (line, tag_name, tag_header, class_tokens) from JSX/HTML class/className attrs."""
+    results: list[tuple[int, str, str, list[str]]] = []
+    attr_re = re.compile(r"\bclass(?:Name)?\s*=\s*")
+    n = len(text)
+    for m in attr_re.finditer(text):
+        pos = m.end()
+        if pos >= n:
+            continue
+        attr_line = text[: m.start()].count("\n") + 1
+
+        # Look backwards up to 400 chars for the opening `<tag`
+        lookback = text[max(0, m.start() - 400) : m.start()]
+        tag_m = list(re.finditer(r"<\s*([A-Za-z][\w.-]*)\b", lookback))
+        tag_name = tag_m[-1].group(1).lower() if tag_m else ""
+        tag_header = lookback[tag_m[-1].start() :] if tag_m else ""
+
+        tokens: list[str] = []
+        ch = text[pos]
+        if ch in ('"', "'"):
+            end = text.find(ch, pos + 1)
+            if end != -1:
+                tokens.extend(text[pos + 1 : end].split())
+        elif ch == "{":
+            depth = 0
+            i = pos
+            in_q: str | None = None
+            while i < n:
+                c = text[i]
+                if in_q:
+                    if c == "\\" and i + 1 < n:
+                        i += 2
+                        continue
+                    if c == in_q:
+                        in_q = None
+                else:
+                    if c in ('"', "'", "`"):
+                        in_q = c
+                    elif c == "{":
+                        depth += 1
+                    elif c == "}":
+                        depth -= 1
+                        if depth == 0:
+                            expr = text[pos + 1 : i]
+                            # Strip ${...} interpolations inside template strings, keep literal pieces
+                            expr_clean = re.sub(r"\$\{[^}]*\}", " ", expr)
+                            for lit in re.findall(r"['\"`]([^'\"`]*)['\"`]", expr_clean):
+                                tokens.extend(lit.split())
+                            break
+                i += 1
+        if tokens:
+            results.append((attr_line, tag_name, tag_header, tokens))
+    return results
+
+
+def check_utility_classes_in_file(file_path: str, text: str, pass1: bool = False) -> list[Finding]:
+    """Check Tailwind / utility-class rules in .tsx, .jsx, .html, .vue, and .svelte files."""
+    findings: list[Finding] = []
+    allows = _collect_line_allows(text)
+
+    for line, tag, tag_header, tokens in _extract_class_attributes(text):
+        sel = f"<{tag}>" if tag else "className"
+
+        if pass1:
+            for tok in tokens:
+                if (PASS1_CHROMATIC_RE.match(tok) or RAW_HEX_CLASS_RE.match(tok)) and not _utility_allowed(
+                    allows, line, "§1.2.1"
+                ):
+                    findings.append(
+                        Finding(
+                            "ERROR",
+                            "§1.2.1",
+                            "pass1-color-leak",
+                            file_path,
+                            line,
+                            sel,
+                            f"Pass 1 must stay grayscale; found color class '{tok}'",
+                        )
+                    )
+                elif PASS1_SHADOW_RE.match(tok) and "inset" not in tok.lower() and not _utility_allowed(allows, line, "§1.2.1"):
+                    findings.append(
+                        Finding(
+                            "ERROR",
+                            "§1.2.1",
+                            "pass1-shadow-leak",
+                            file_path,
+                            line,
+                            sel,
+                            f"Pass 1 must stay flat/grayscale; defer '{tok}' to Pass 2 (§6)",
+                        )
+                    )
+
+        for tok in tokens:
+            if RAW_HEX_CLASS_RE.match(tok) and not _utility_allowed(allows, line, "§1.5", "§5.3"):
+                findings.append(
+                    Finding(
+                        "ERROR",
+                        "§1.5",
+                        "raw-hex-class",
+                        file_path,
+                        line,
+                        sel,
+                        f"raw hex class '{tok}' bypasses semantic tokens; use project color tokens",
+                    )
+                )
+
+            if DARK_PREFIX_RE.match(tok) and not _utility_allowed(allows, line, "13-beyond"):
+                findings.append(
+                    Finding(
+                        "ERROR",
+                        "13-beyond",
+                        "dark-prefix-override",
+                        file_path,
+                        line,
+                        sel,
+                        f"'{tok}' hardcodes dark: override on component; swap semantic tokens under [data-theme='dark'] instead",
+                    )
+                )
+
+            if tok == "transition-all" and not _utility_allowed(allows, line, "15-direction"):
+                findings.append(
+                    Finding(
+                        "ERROR",
+                        "15-direction",
+                        "no-transition-all",
+                        file_path,
+                        line,
+                        sel,
+                        "transition-all animates unintended properties; use transition-opacity / transition-transform / transition-colors",
+                    )
+                )
+
+            if LIGHT_WEIGHT_CLASS_RE.match(tok) and not _utility_allowed(allows, line, "§2.2.b", "§2.2"):
+                findings.append(
+                    Finding(
+                        "ERROR",
+                        "§2.2.b",
+                        "light-font-weight",
+                        file_path,
+                        line,
+                        sel,
+                        f"'{tok}' is below weight 400; de-emphasize with color or size instead",
+                    )
+                )
+
+            m_arb = ARBITRARY_SPACING_TYPE_RE.match(tok)
+            if m_arb:
+                inner = m_arb.group("inner").strip()
+                prefix = m_arb.group("prefix").lower()
+                if not inner.startswith("var("):
+                    px = _parse_px(inner)
+                    is_type = prefix == "text"
+                    allowed_set = TYPE_SCALE_PX if is_type else SPACING_SCALE_PX
+                    if px is None or (px > 2 and (not px.is_integer() or int(px) not in allowed_set)):
+                        rid = "§4.1" if is_type else "§3.2"
+                        if not _utility_allowed(allows, line, rid, "§1.5"):
+                            findings.append(
+                                Finding(
+                                    "ERROR",
+                                    rid,
+                                    "off-scale-arbitrary-class",
+                                    file_path,
+                                    line,
+                                    sel,
+                                    f"arbitrary value '{tok}' is off the project scale; use a scale utility or CSS token",
+                                )
+                            )
+
+        if any(OUTLINE_NONE_RE.match(t) for t in tokens) and not any(FOCUS_REPLACEMENT_RE.match(t) for t in tokens):
+            if not _utility_allowed(allows, line, "13-beyond"):
+                findings.append(
+                    Finding(
+                        "ERROR",
+                        "13-beyond",
+                        "bare-outline-none",
+                        file_path,
+                        line,
+                        sel,
+                        "outline-none without focus-visible:ring / focus-visible:outline breaks keyboard visibility",
+                    )
+                )
+
+        is_heading_el = tag in ("h1", "h2", "h3") or any(LARGE_TEXT_CLASS_RE.match(t) for t in tokens)
+        if is_heading_el:
+            loose = [t for t in tokens if LOOSE_LEADING_CLASS_RE.match(t)]
+            if loose and not _utility_allowed(allows, line, "§4.5.2", "§4.5"):
+                findings.append(
+                    Finding(
+                        "ERROR",
+                        "§4.5.2",
+                        "loose-heading-leading",
+                        file_path,
+                        line,
+                        sel,
+                        f"large heading/text uses loose leading '{loose[0]}'; tighten headline leading toward 1.0–1.25",
+                    )
+                )
+
+        is_non_text_input = bool(
+            re.search(r"\btype\s*=\s*['\"](?:checkbox|radio|hidden|range|file|submit|button|reset|color)['\"]", tag_header, re.I)
+        )
+        if tag in ("input", "textarea", "select") and not is_non_text_input:
+            has_no_border = any(re.match(r"^(?:[a-z0-9-]+:)*border-(?:0|none)$", t, re.I) for t in tokens)
+            has_inset_or_ring = any(
+                "inset" in t.lower() or "shadow-inner" in t.lower() or re.match(r"^(?:[a-z0-9-]+:)*ring(?:-\d+)?$", t, re.I)
+                for t in tokens
+            )
+            if has_no_border and not has_inset_or_ring and not _utility_allowed(allows, line, "§6.1.3", "§6.1"):
+                findings.append(
+                    Finding(
+                        "ERROR",
+                        "§6.1.3",
+                        "flat-input",
+                        file_path,
+                        line,
+                        sel,
+                        "input strips border without inset shadow or ring; add border + inset depth (§6.1.3)",
+                    )
+                )
+
+        is_content_container = tag in ("main", "article") or any(CONTENT_CLASS_HINT_RE.match(t) for t in tokens)
+        if is_content_container:
+            has_expand = any(t in ("flex-1", "grow", "w-full") for t in tokens)
+            has_max_w = any(re.match(r"^(?:[a-z0-9-]+:)*max-w-", t, re.I) for t in tokens)
+            if has_expand and not has_max_w and not _utility_allowed(allows, line, "§3.3", "§4.3"):
+                findings.append(
+                    Finding(
+                        "ERROR",
+                        "§3.3",
+                        "unconstrained-content",
+                        file_path,
+                        line,
+                        sel,
+                        "fluid content container expands without max-w-*; constrain width (§3.3 / §4.3) or exempt with mm-ui-allow §3.3",
+                    )
+                )
+
+        has_row_hint = any(ROW_CLASS_HINT_RE.match(t) for t in tokens)
+        has_exempt_hint = tag in ("button", "a") or any(EXEMPT_CLASS_HINT_RE.match(t) for t in tokens)
+        if has_row_hint and not has_exempt_hint and "items-center" in tokens:
+            if not _utility_allowed(allows, line, "§4.4"):
+                findings.append(
+                    Finding(
+                        "ERROR",
+                        "§4.4",
+                        "center-aligned-row",
+                        file_path,
+                        line,
+                        sel,
+                        "items-center on text row/header misaligns mixed text sizes; use items-baseline (or exempt with mm-ui-allow §4.4)",
+                    )
+                )
+
+    return findings
+
+
+def scan_path(target: Path, pass1: bool = False) -> tuple[list[Finding], dict[str, int]]:
     files: list[Path] = []
     if target.is_file():
-        files.append(target)
+        if target.suffix.lower() in ALL_SCAN_EXTENSIONS:
+            files.append(target)
     elif target.is_dir():
         for root, dirs, filenames in os.walk(target):
             dirs[:] = sorted(d for d in dirs if d not in SKIP_DIRS)
             for name in sorted(filenames):
                 p = Path(root) / name
-                if p.suffix.lower() in STYLE_EXTENSIONS | MARKUP_EXTENSIONS:
+                if p.suffix.lower() in ALL_SCAN_EXTENSIONS:
                     files.append(p)
 
+    counts: dict[str, int] = {}
     all_findings: list[Finding] = []
     for path in files:
         text = path.read_text(encoding="utf-8", errors="replace")
         ext = path.suffix.lower()
+        counts[ext] = counts.get(ext, 0) + 1
         if ext in STYLE_EXTENSIONS:
             rules, allows = parse_css_rules(text, start_line=1)
             all_findings.extend(check_rules_in_file(str(path), rules, allows, pass1=pass1))
@@ -756,7 +1067,10 @@ def scan_path(target: Path, pass1: bool = False) -> list[Finding]:
                 start_line = text[: match.start(1)].count("\n") + 1
                 rules, allows = parse_css_rules(style_text, start_line=start_line)
                 all_findings.extend(check_rules_in_file(str(path), rules, allows, pass1=pass1))
-    return all_findings
+            all_findings.extend(check_utility_classes_in_file(str(path), text, pass1=pass1))
+        elif ext in JSX_EXTENSIONS:
+            all_findings.extend(check_utility_classes_in_file(str(path), text, pass1=pass1))
+    return all_findings, counts
 
 
 def _rgb_to_hsl(rgb: tuple[int, int, int]) -> tuple[float, float, float]:
@@ -926,7 +1240,7 @@ BRIEF_REQUIRED_KEYS = (
     ("Alignment & depth:", "§4.4 / §6.1.3", "missing 'Alignment & depth:' constraint"),
     ("Hierarchy & empty state:", "§2.1 / §8.4", "missing 'Hierarchy & empty state:' constraint"),
 )
-REQUIRED_BUILD_LENSES = ("02", "03", "04", "06", "10", "15")
+REQUIRED_BUILD_LENSES = ("02", "03", "04", "06", "08", "09", "10", "15")
 
 
 def check_brief_files(paths: list[Path]) -> list[Finding]:
@@ -938,14 +1252,16 @@ def check_brief_files(paths: list[Path]) -> list[Finding]:
     ref_file = str(paths[0])
     findings: list[Finding] = []
 
+    extracted_vals: dict[str, str] = {}
     for key, rule_id, msg in BRIEF_REQUIRED_KEYS:
         m = re.search(rf"^\s*(?:[/*#-]*\s*)?{re.escape(key)}\s*(.*)$", combined, re.IGNORECASE | re.MULTILINE)
         if not m or not m.group(1).strip():
             findings.append(Finding("ERROR", rule_id, "missing-brief-key", ref_file, 1, key, msg))
+        else:
+            extracted_vals[key] = m.group(1).strip()
 
-    rules_match = re.search(r"Rules read:\s*(.+)", combined, re.IGNORECASE)
-    if rules_match:
-        rules_val = rules_match.group(1)
+    rules_val = extracted_vals.get("Rules read:", "")
+    if rules_val:
         missing_lenses = [lens for lens in REQUIRED_BUILD_LENSES if not re.search(rf"\b{lens}(?:-[\w]+)?\b", rules_val)]
         if missing_lenses:
             findings.append(
@@ -956,7 +1272,7 @@ def check_brief_files(paths: list[Path]) -> list[Finding]:
                     ref_file,
                     1,
                     "Rules read",
-                    f"Rules read is missing required Build lens reference(s): {', '.join(missing_lenses)} (expected 02, 03, 04, 06, 10, 15)",
+                    f"Rules read is missing required Build lens reference(s): {', '.join(missing_lenses)} (expected 02, 03, 04, 06, 08, 09, 10, 15)",
                 )
             )
         if "§" not in rules_val:
@@ -969,6 +1285,37 @@ def check_brief_files(paths: list[Path]) -> list[Finding]:
                     1,
                     "Rules read",
                     "Rules read must cite concrete §id values extracted from the lens files",
+                )
+            )
+
+    canvas_val = extracted_vals.get("Canvas & measure:", "")
+    if canvas_val and not re.search(r"(?:\d+\s*(?:px|ch|em|rem)|max-w|§3\.3\.3|full-bleed)", canvas_val, re.I):
+        findings.append(
+            Finding(
+                "ERROR",
+                "§3.3 / §4.3",
+                "vague-canvas-brief",
+                ref_file,
+                1,
+                "Canvas & measure",
+                "Canvas & measure must state concrete width/measure values (e.g. 768px / 360px / 65ch / max-w-*)",
+            )
+        )
+
+    align_val = extracted_vals.get("Alignment & depth:", "")
+    if align_val:
+        has_align = bool(re.search(r"(?:baseline|center|align|对齐|基线|居中)", align_val, re.I))
+        has_depth = bool(re.search(r"(?:border|inset|shadow|elevation|flat|景深|阴影|描边|边框)", align_val, re.I))
+        if not (has_align and has_depth):
+            findings.append(
+                Finding(
+                    "ERROR",
+                    "§4.4 / §6.1.3",
+                    "incomplete-alignment-depth-brief",
+                    ref_file,
+                    1,
+                    "Alignment & depth",
+                    "Alignment & depth must specify both alignment (baseline + any control exceptions) and depth (border/inset/shadow)",
                 )
             )
     return findings
@@ -1056,8 +1403,21 @@ def main() -> int:
         return 2
 
     findings: list[Finding] = []
+    total_counts: dict[str, int] = {}
     for raw_path in args.paths:
-        findings.extend(scan_path(Path(raw_path), pass1=args.pass1))
+        path_findings, counts = scan_path(Path(raw_path), pass1=args.pass1)
+        findings.extend(path_findings)
+        for ext, cnt in counts.items():
+            total_counts[ext] = total_counts.get(ext, 0) + cnt
+
+    if args.paths and sum(total_counts.values()) == 0:
+        exts = ", ".join(sorted(ALL_SCAN_EXTENSIONS))
+        print(
+            f"error: scanned 0 files under {', '.join(args.paths)} (supported: {exts}); refusing vacuous pass",
+            file=sys.stderr,
+        )
+        return 2
+
     if args.tokens:
         findings.extend(check_tokens_file(Path(args.tokens)))
     if args.brief:
@@ -1067,15 +1427,17 @@ def main() -> int:
 
     errors = [f for f in findings if f.severity == "ERROR"]
     warnings = [f for f in findings if f.severity == "WARN"]
+    coverage = ", ".join(f"{cnt} {ext}" for ext, cnt in sorted(total_counts.items()))
+    cov_prefix = f"scanned {coverage} file(s) — " if coverage else ""
 
     if not findings:
-        print("check_ui_rules: 0 errors, 0 warnings — pass")
+        print(f"check_ui_rules: {cov_prefix}0 errors, 0 warnings — pass")
         return 0
 
     for f in findings:
         print(f"{f.severity:<5} [{f.rule_id}] {f.file}:{f.line} ({f.selector}) -> {f.message}")
 
-    print(f"\nsummary: {len(errors)} error(s), {len(warnings)} warning(s)")
+    print(f"\nsummary: {cov_prefix}{len(errors)} error(s), {len(warnings)} warning(s)")
     if errors or (args.strict and warnings):
         return 1
     return 0

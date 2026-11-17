@@ -37,18 +37,18 @@ find "$REPO_ROOT/.agents/ADR/proposed" -name '*.plan.md' 2>/dev/null | sort
 
 按顺序执行各个步骤（如果用户仅指定执行部分步骤，只完成指定子集，并明确说明哪些步骤仍未执行），步骤之间无需逐一请示。仅在验证连续失败、触发停机点（stop point）或现实与 ADR 发生冲突时停下——不要在每一步结束时停下来要许可。
 
-- 每完成一步，立刻执行该步内联的 `Verify:` 命令；绿灯通过后，在 `.plan.md` 对应步骤的 `Verify:` 行旁记入实测结果（如 `— passed, YYYY-MM-DD`；若为对话计划则在汇报中记录），便于跨会话续做与 `mm-land` 核验。没有绿灯通过的步骤不算完成，不得进入下一步。
+- 每完成一步，立刻执行该步内联的 `Verify:` 命令；绿灯通过后，**必须连同实测覆盖范围**（如 `scanned 8 .tsx, 1 .css — 0 errors, YYYY-MM-DD`，禁止只写 `passed` 而不附范围）记入 `.plan.md` 对应步骤的 `Verify:` 行旁（若为对话计划则在汇报中记录），便于跨会话续做与 `mm-land` 核验。没有绿灯通过或实际覆盖数为 0 的步骤不算完成，不得进入下一步。
 - 若某步 `Verify:` 失败：允许围绕本步目标做最多 2 次局部修复并重跑验证；若同一错误连续失败、根因超出本步范围，或暴露出前提失效 / ADR 冲突，立刻停下汇报，绝不陷入盲改循环。
-- 当某一步标注了 `mm-ui`（`Build`、`Refine` 或 `System`）时，先读取 `skills/mm-ui/SKILL.md` 及对应模式剧本（`references/mode-system.md` / `mode-build.md` / `mode-refine-review.md`），再按其 Read Gate 读取必读透镜文件：
+- 当某一步标注了 `mm-ui`（`Build`、`Refine` 或 `System`）时，先读取 `skills/mm-ui/SKILL.md` 及对应模式剧本（`references/mode-system.md` / `mode-build.md` / `mode-refine-review.md`），再按其 Read Gate 一次性读齐必读透镜文件（Build 含 `02/03/04/06/08/09/10/15`）：
   - 同一视觉交付只需在首次进入 UI 构建前按 `mode-build.md` 格式陈述三行方向（`Visual thesis:` / `Content plan:` / `Interaction thesis:`）并停下等待用户确认，后续 UI 步骤沿用已锁定的方向，再写入包含 9 个固定键名的方向+约束简报注释；
-  - Build 必须拆成 **Pass 1**（仅灰度 Token + 骨架/宽度/排版/基线，跑通 `check_ui_rules.py --pass1`）与 **Pass 2**（上色 + 景深 + 收尾/空状态，跑通 `check_ui_rules.py --brief` 及 `check_contrast.py`），禁止一次性生成坍缩；System 步骤须使用 `generate_ramp.py` 生色并跑通 `check_ui_rules.py --tokens`；
+  - Build 必须**按每个新增表面/步骤独立执行** **Pass 1**（仅灰度 Token + `§8.4` 完整空状态骨架 + 宽度/排版/基线，跑通 `check_ui_rules.py <目标> --pass1`）与 **Pass 2**（上色 + 景深 + 收尾，跑通 `check_ui_rules.py <目标> --brief <简报文件>` 及 `check_contrast.py`），不得以上一步的 Pass 1 豁免后续侧栏/弹窗等新表面；System 步骤须使用 `generate_ramp.py` 生色并跑通 `check_ui_rules.py --tokens`；
   - 产出对照截图（`1440px` + `400px` + 空状态；无浏览器时必须正式列出**逐项未核验项清单**），并在汇报中给出「改动 → `§id`」追溯清单与 5 项 AI Slop Test 逐条 `Clear / Hit` 裁决（可用 `check_ui_rules.py --report` 自检），不要把 `§id` 写满业务代码注释。
 - `## Not in scope` 是明确的「禁止事项」清单。即使在范围之外发现了问题，也只需记入最终报告并保持原样；顺手把它们修了，正是两步改动变成无人能读懂的巨大 diff 的原因。
 - 需要写注释解释某项长期约束时，在写下对应代码的那一次编辑中同步写好，并严格遵循 `.agents/ADR/AGENTS.md` 中的 `## References from code` 格式：先写清约束后果，再附上 `See ADR <date>-<slug>.`（不得写入公开 API 文档注释）。如果留到最后统一补注释，写出来的往往只有空洞的编号而没有后果说明，还会漏掉真正需要解释的位置。
 
 ## 当现实与计划不符时
 
-- 发现 ADR 中的决策不再成立 → 停下，说明原因，并建议用户使用 `mm-plan` 起草替代的新记录。绝不要为了迎合代码去改写原 ADR。
+- 发现 `implemented/` 或已定案核心决策不再成立 → 停下，说明原因，并建议用户使用 `mm-plan` 起草替代的新记录；绝不要为了迎合代码去改写原 ADR。若仅是对仍处于 `proposed/` 的记录在实施中补充局部参数/实现细节（未推翻主方向，如补齐 `--shadow-inset` 或容器上限），**不得静默改完而不汇报**，必须在汇报中单列「提议阶段修订（Pending approval）」说明原因与风险，待用户确认。
 - 某一步的前提条件已失效（文件被移动、依赖已变更、API 与预期不一致） → 停下并汇报。此时要么修订计划，要么调整实现路径；绝不要默默二选一——静默偏离正是计划与代码开始各说各话的起点。
 - 触发了计划中的停机点（stop point） → 停下并询问用户。这正是设置停机点的意义。
 

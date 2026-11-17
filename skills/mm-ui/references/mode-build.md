@@ -6,15 +6,17 @@ If the work needs architectural or multi-page planning, `mm-plan` owns IA and st
 
 ## Read Gate (mandatory before writing the brief or code)
 
-Read these lens files before drafting your Constraint Brief:
+Read **all 8** of these files before drafting your Constraint Brief (do not defer `08` or `09` until the end):
 
 - [`02-hierarchy.md`](02-hierarchy.md) — ranking content and actions, weight/color over size alone
 - [`03-spacing.md`](03-spacing.md) — spacing scale, `§3.3` content width caps, `§3.6` group vs inner spacing
 - [`04-typography.md`](04-typography.md) — type scale, `§4.3` 45–75ch measure, `§4.4` baseline alignment, `§4.5` proportional leading
 - [`06-depth.md`](06-depth.md) — light from above, `§6.1.3` inset inputs, 5-step elevation
+- [`08-finishing.md`](08-finishing.md) — `§8.4` empty-state design (mark/illustration + title + copy + CTA + hide inert UI) and `§8.5` fewer borders
+- [`09-antipatterns.md`](09-antipatterns.md) — symptom → `§id` → fix negative-audit checklist
 - [`10-recipes.md`](10-recipes.md) — canonical component recipes (button, form group, card, empty state, table, dropdown, modal, alert)
 - [`15-direction.md`](15-direction.md) — direction lock, absolute bans, and the 5-item AI Slop Test
-- Also read [`07-images.md`](07-images.md) / [`08-finishing.md`](08-finishing.md) when working with photos, icons, or surface finishes.
+- Also read [`07-images.md`](07-images.md) when working with photos, avatars, or non-trivial graphics.
 
 ## Planning-period boundary
 
@@ -36,17 +38,18 @@ If currently in `mm-plan` without implementation authorization:
 6. Add color, then depth, then finishing touches — strictly in that order (`§5`, `§6`, `§8`).
 7. Design the empty state together with the primary feature (`§8.4`).
 
-## Two-pass write discipline (no single-shot collapse)
+## Two-pass write discipline (per new surface / step; no collapse)
 
-Even when design-system tokens already exist, split implementation into two distinct passes:
+Even when design-system tokens already exist, run Pass 1 → Pass 2 independently **for each new surface or step** (passing Pass 1 on an earlier main view does not exempt a later sidebar, drawer, or modal step):
 
-- **Pass 1 (Skeleton + Grayscale + Geometric Rhythm)**:
+- **Pass 1 (Skeleton + Grayscale + Empty State Structure + Geometric Rhythm)**:
   - Use neutral grayscale tokens only (`--surface*`, `--text*`, `--border*`).
   - Establish container `max-width`, type scale, proportional `line-height`, `45–75ch` measure, group vs inner spacing, and `baseline` row alignment.
-  - **Forbidden in Pass 1**: `--accent*`, `--status-*`, and decorative non-inset `box-shadow`.
-  - Run `scripts/check_ui_rules.py <target> --pass1` (must exit `0`) and confirm hierarchy holds in grayscale (`§1.2.1`).
-- **Pass 2 (Color + Depth + Finishing + Empty State)**:
-  - Layer semantic accent/status colors (`§5`), inset input depth and z-axis elevation (`§6`), finishing details (`§8`), and the full empty state (`§8.4`).
+  - Build the **`§8.4` empty state skeleton together with the primary feature** (low-contrast mark/illustration + title + 1-line explanation + single CTA, hiding tabs/filters/metrics that do nothing yet — never a bare `text-sm` placeholder).
+  - **Forbidden in Pass 1**: `--accent*`, `--status-*`, chromatic classes (`bg-indigo-*`, `bg-blue-*`), and decorative non-inset `box-shadow`.
+  - Run `scripts/check_ui_rules.py <target> --pass1` (supports `.css/.scss/.less/.tsx/.jsx/.html/.vue/.svelte`; refuses 0-file scans and must exit `0`), and confirm hierarchy holds in grayscale (`§1.2.1`).
+- **Pass 2 (Color + Depth + Finishing)**:
+  - Layer semantic accent/status colors (`§5`), inset input depth and z-axis elevation (`§6`), and finishing details (`§8`).
 
 ## Required 9-key Direction & Constraint Brief
 
@@ -56,12 +59,12 @@ Before writing the first line of markup, place this structured comment block at 
 Visual thesis: <mood, material, and energy in one sentence>
 Content plan: <sequence of sections/states on this surface>
 Interaction thesis: <key micro-interactions, or "none" + evidence-based reason>
-Rules read: <list 02-hierarchy, 03-spacing, 04-typography, 06-depth, 10-recipes, 15-direction with extracted §id & values>
-Canvas & measure: <main content max-width (or §3.3.3 full-bleed reason) + prose 45–75ch>
+Rules read: <list 02-hierarchy, 03-spacing, 04-typography, 06-depth, 08-finishing, 09-antipatterns, 10-recipes, 15-direction with extracted §id & values>
+Canvas & measure: <explicit width/measure for EVERY region (e.g. sidebar 360px, main max-w-768px, prose 65ch, or §3.3.3 full-bleed reason)>
 Type & leading: <per-level font sizes & paired line-heights; never a single 1.5 everywhere>
 Density & spacing: <density tier + explicit inner-group vs between-group spacing values>
-Alignment & depth: <baseline on mixed text rows (note icon-control exceptions) + input/surface depth treatment>
-Hierarchy & empty state: <content ranks, single primary action, empty-state placement & hidden controls>
+Alignment & depth: <baseline on mixed text rows + explicit icon-control center exceptions + input/surface depth (border/inset/shadow)>
+Hierarchy & empty state: <content ranks, single primary action, §8.4 empty-state mark/copy/CTA & hidden inert controls>
 ```
 
 ## Stop points
