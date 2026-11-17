@@ -58,8 +58,11 @@ command an agent can run. A step that says "implement the feature" is not a step
    Verify: `pnpm test src/config/load.test.ts`
 ```
 
-Do not repeat these checks in `## Verification`. That section belongs to the human,
-and duplicating an assertion in two places is how the two copies end up disagreeing.
+During execution, record each step's outcome inline beside `Verify:` (e.g.
+``Verify: `pnpm test src/config/load.test.ts` — passed, 2026-11-16``) so a later
+session running `mm-land` can verify that every step actually ran. Do not repeat
+these checks in `## Verification`. That section belongs to the human, and
+duplicating an assertion in two places is how the two copies end up disagreeing.
 
 If the work cannot be cut into independently acceptable steps, say so and run it as
 one step instead of inventing phases that only exist on paper. A "step 0:
