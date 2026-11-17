@@ -165,4 +165,8 @@ A token set is a **durable decision**. Write a `proposed/design/` ADR per `adr-s
 - The naming scheme and cross-component conventions (or mapping to an existing component
   library).
 
+If invoked during `mm-plan` before the user approves the plan, keep these decisions and
+the planned file targets in the presented proposal and write the ADR, `.plan.md`, and
+token/preview files only after the user confirms (per `mm-plan` and `mm-ui` `SKILL.md`).
+
 A single screen's styling is not a decision and does not get a record.
