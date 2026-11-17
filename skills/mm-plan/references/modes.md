@@ -35,6 +35,12 @@ Structure:
 Judging value is not judging difficulty. A thing can be easy and worthless, or hard
 and necessary; say which question you are answering.
 
+Exit condition: stop once the verdict, flip condition, and cheapest test are
+delivered. If the verdict is `don't build` for a tempting idea likely to be
+re-litigated and `.agents/ADR/` exists, offer to record it under `rejected/`.
+If the verdict is `build` (or `build the smaller thing`) and the user wants to
+plan execution, transition to Full mode.
+
 ## Triage
 
 Use when the input is a bundle of independently acceptable or rejectable asks —
@@ -47,6 +53,10 @@ One table, one row per item, no prose between rows:
 
 Then order only the accepted items, and say what the first one buys. Do not merge
 items to make the list shorter; the user needs to see each one judged.
+
+Exit condition: stop once every item has a verdict, accepted items are ordered,
+and the first item's payoff is stated. If the user selects an accepted item to
+plan, transition to Lightweight or Full mode for that item.
 
 ## Attack angles
 

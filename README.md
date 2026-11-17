@@ -48,9 +48,10 @@ checkout works too — just don't do both, or every name loads twice.
 
 ## Conventions
 
-- Write every skill in English, including `references/` and scripts. The one
-exception is `description` trigger phrases: Chinese words belong there so the skill
-still matches Chinese requests.
+- Write `SKILL.md` in Chinese, keeping English specification identifiers, paths, and
+  ADR/plan headings (e.g. `proposed/`, `implemented/`, `Status: proposed`,
+  `## Verification`), and include both Chinese and English trigger phrases in
+  `description`. Keep `references/` and `scripts/` in English.
 - Prefix every skill name (`mm-`) — skill names share a global namespace.
 - `description` in frontmatter is the only trigger. Write what it does **and** when
   to use it, including the words a user would actually say.

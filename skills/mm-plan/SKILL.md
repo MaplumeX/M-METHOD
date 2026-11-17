@@ -1,208 +1,142 @@
 ---
 name: mm-plan
-description: Turn a rough idea into an approved, decision-complete plan by interrogating the user round by round. Use when the user wants to plan, stress-test, or judge whether to build something — 出方案、怎么做、值不值得、有没有必要 — or asks how to implement a change. Not for visual design (that is mm-ui), bug fixes, error diagnosis, or small edits.
+description: 通过逐轮提问澄清需求，将粗略想法收敛为已批准、决策完备的执行计划。适用于用户想要规划方案、压测想法、评估是否值得构建某项功能（如「出方案」「怎么做」「值不值得」「有没有必要」「plan this」），或询问如何实现某项变更时。不适用于视觉设计（应使用 mm-ui）、Bug 修复、错误诊断或微小的直接修改。
 ---
 
-# Plan
+# Plan · 规划
 
-A plan is not a document you produce. It is a design tree you and the user settle
-together: every decision branches into the decisions that hang off it, and the plan
-is done when no branch is left silently assumed.
+计划不是你单方面产出的文档，而是你与用户共同敲定的一棵决策树：每个决策都会分叉出依赖它的子决策，直到没有任何分支被静默假设为止，规划才算完成。
 
-## Gate first
+## 先过准入闸门
 
-Three exits, chosen before any questioning.
+在提出任何问题之前，先判断属于哪条出口：
 
-- **Not my job.** Bug reports, stack traces, flaky tests, and "why is this broken"
-  are diagnosis, not planning. Say so in one line and route out. A plan built on an
-  undiagnosed bug is speculation with extra steps.
-- **Lightweight.** The problem is defined and the only open question is how to fix
-  it, with no real alternatives. Answer in 2-3 sentences — what changes, where, why
-  — after naming the brute-force version in one line. Then wait for approval.
-- **Full.** Everything else. Proceed below.
+- **不属于规划（Not my job）**：Bug 报告、堆栈报错、偶发失败的测试、以及「为什么这里坏了」属于问题诊断，不是规划。用一句话说明并转出。建立在未诊断 Bug 之上的计划，只是走了更多步骤的猜测。
+- **评估模式（Evaluation）**：用户询问「值不值得做」「该不该保留」「要不要构建」某单一目标。不直接出实现计划，按 `references/modes.md` 中的 Evaluation 结构给出裁决、翻转条件与最低成本验证。
+- **分诊模式（Triage）**：输入是一组彼此独立、可分别取舍的需求、截图或问题清单。按 `references/modes.md` 中的 Triage 表格逐项裁决并排序，不合并条目。
+- **轻量模式（Lightweight）**：问题已明确，唯一的开放问题是「怎么改」，且不存在真正有分歧的备选方案。先用一句话点出最直接的粗暴做法，再用 2–3 句话说明改动内容、改动位置及原因，然后等待确认。
+- **完整模式（Full）**：其余所有情况。按以下流程推进。
 
-Upgrade from lightweight when you find three or more genuinely different approaches
-with meaningful tradeoffs. See `references/modes.md` for the lightweight, evaluation,
-and triage variants.
+如果在轻量模式下发现了三种及以上本质不同的方案且各有明显权衡，应立即升级为完整模式。以上各变体的格式与退出条件详见 `references/modes.md`。
 
-## Ground
+## 夯实事实基础
 
-Read before proposing anything:
+在提出任何建议前，先读取以下内容：
 
-- Root `AGENTS.md`, plus only the domain rule that matches this problem. Loading the
-  whole tree dilutes the rules that actually bind.
-- `.agents/ADR/AGENTS.md`, the `implemented/` records covering this area, and any
-  `proposed/` record that overlaps. A plan that duplicates an open proposal is
-  either that proposal's continuation or its replacement — say which. If the repo
-  has no `.agents/ADR/`, skip it: this skill has to work before setup has run.
-- The real config file when the plan touches a default, port, env var, or flag. Lift
-  the live value; never quote one from memory.
+- 根目录 `AGENTS.md`，以及仅与当前问题匹配的领域规则。把整棵规则树全量加载会稀释真正起约束作用的规则。
+- `.agents/ADR/AGENTS.md`、覆盖当前区域的 `implemented/` 记录，以及任何存在重叠的 `proposed/` 记录。如果新计划与某个待推进提案重复，必须明确它是该提案的延续还是替代。若仓库尚未建立 `.agents/ADR/`，则跳过此项：本 skill 必须能在 `mm-setup` 运行前正常工作。
+- 当计划涉及默认配置、端口、环境变量或启动参数时，读取真实的配置文件。直接引用现场真实值，绝不凭记忆背诵。
 
-If the emerging plan contradicts a documented rule or an ADR — a "never X", a
-"must Y" — say which rule, which step, and what you recommend. Do not silently
-override it, and do not stop dead either: the conflict should reach the user while
-there is still time to choose. If the plan supersedes an ADR, it produces a new
-record that cross-links the old one; never edit the old decision into a different
-one.
+如果正在成形的计划与已有文档规则或 ADR 冲突（例如「禁止 X」或「必须 Y」），必须明确指出冲突的是哪条规则、哪个步骤，以及你的建议。不要静默绕过，也不要直接卡死——应该在用户还有选择余地时把冲突摆到台面上。若计划将替代某份 ADR，需产出一份新记录并与旧记录相互链接；绝不要把旧决策原地改写成另一个意思。
 
-## Facts are yours, decisions are theirs
+## 事实归你查，决策归用户
 
-Look up everything you can: framework built-ins, official patterns, ecosystem
-standards, current file contents, whether a dependency already solves this. An
-existing official solution is the default recommendation unless you can say why it
-falls short for this specific case.
+尽可能自己查清所有客观事实：框架内置能力、官方推荐模式、生态标准、当前文件内容、现有依赖是否已自带解法。除非你能说清在当前具体场景下它为何不够用，否则已有的官方方案就是默认推荐。
 
-For a lookup that spans files or needs current external docs, dispatch a subagent
-instead of spending the planning context on it. Never ask the user for a fact you
-could find yourself. Never block a whole round on a lookup either — only the
-questions downstream of that fact wait; ask the rest of the frontier now.
+对于需要跨多个文件检索或查阅外部最新文档的调研，派发子 agent 去查，不要用宝贵的规划上下文来堆搜索细节。绝不要向用户询问你自己就能查到的事实。也不要因为等待某个调研而阻塞整轮提问——只有依赖该事实的下游问题需要等待，其余边界上的问题立刻在本轮提出。
 
-Decisions belong to the user. Put each one to them with a recommendation, and wait.
+决策权属于用户。把每个待决事项连同你的推荐选项一并交给用户，然后等待回答。
 
-## Rounds
+## 逐轮推进
 
-Work the tree in rounds. The **frontier** is every decision whose prerequisites are
-already settled — what you can ask now without guessing at answers you have not
-heard. Ask the whole frontier in one round, then stop.
+按轮次推进决策树。**当前边界（frontier）**是指所有前置条件都已敲定、现在无需猜测未回答问题即可直接发问的所有决策点。在一轮中一次性抛出整个边界上的所有问题，然后停下来等待。
 
 ```
-❓ **Q1** — **<question title>**
+❓ **Q1** — **<问题标题>**
 
-<one sentence of context>
+<一句话背景说明>
 
-- **A.** <option> — <what it costs or buys>
-- **B.** <option> — <what it costs or buys>
+- **A.** <选项> — <代价或收益>
+- **B.** <选项> — <代价或收益>
 
-➡️ **A**, because <reason>.
+➡️ **A**，因为 <理由>。
 
 ---
 
-❓ **Q2** — **<question title>**
+❓ **Q2** — **<问题标题>**
 
-<context; no options — the answer is a fact about intent, not a design choice>
+<背景说明；无选项——答案是关于意图或事实的确认，而非设计二选一>
 
-➡️ <your recommended answer>
+➡️ <你的推荐答案>
 ```
 
-Give multiple options whenever the design space really has them: naming the options
-makes the question cheap to answer and shows what you considered. Write each option
-with its consequence, not just its name — the user is choosing a consequence, not a
-label. Skip the list when the answer is an intent, a number, or a fact about the
-world.
+只要设计空间里确实存在多个选项，就明确列出来：列出选项能降低用户的回答成本，也能体现你考虑过哪些路径。每个选项都要写出它的**后果**，而不只是一个名字——用户是在为后果做选择，不是在选标签。如果答案只是一个意图、一个数值或一个客观约束，则省略选项列表。
 
-Never present a set of equal options with no recommendation. A menu is a way of not
-deciding, and it moves the work back to the user without shrinking it.
+绝不要只给出一组等价选项却不做推荐。甩出一份没有倾向的菜单是在逃避决策，把工作原封不动退回给用户而没有替他缩小范围。
 
-Word each question so that "yes" accepts your recommendation. A question that
-depends on another question still open in this round belongs to a later round, not
-this one.
+每个问题的措辞应保证用户回答「是 / 同意」即代表采纳你的推荐方案。如果某个问题依赖本轮中尚未敲定的另一个问题，它属于下一轮，不要放在本轮。
 
-Each round reshapes the tree: settled decisions push the frontier outward and
-unblock what depended on them. Recompute the frontier and ask the next round.
+每一轮都会重塑决策树：已敲定的决策会把边界向外推进，解锁原本依赖它的后续问题。重新计算边界，发出下一轮问题。
 
-Keep a running list of settled decisions and the options rejected along the way —
-the rejected ones are what `## Alternatives considered` draws from later.
+如果一开始就存在两条及以上本质不同的架构或设计形态，且各自会引出完全不同的下游子问题，应在决策树的最早轮次就将其作为根节点边界问题对比并拍板——不要先沿着其中一条路线问完几轮细节，最后才推翻重选。
 
-There is no round limit. The tree decides how long this takes, not a feeling that
-three rounds is enough. A round that asks a single question usually means the
-frontier was computed wrong: independent questions belong in the same round.
+在推进过程中持续记录已敲定的决策以及沿途被否决的选项——被否决的选项正是后续 `## Alternatives considered` 的素材来源。
 
-If the user does not know the answer to a frontier question, it is not a decision:
-either it is a fact to look up, or it is a constraint to assume out loud ("assuming
-X for now, which means Y"). Never let an unanswered question quietly become a
-default.
+轮次没有上限。由决策树本身的复杂度决定需要几轮，而不是凭感觉认为「三轮就够了」。如果一轮里只问了一个问题，通常说明边界计算有误：彼此独立的问题应当合并在同一轮里。
 
-## Converge
+如果用户对某个边界问题表示「不知道」，那它通常不是一个设计决策：要么是需要你去查证的事实，要么是需要显式声明的假设约束（例如「暂且假设 X，这意味着 Y」）。绝不要让一个未回答的问题悄悄变成默认前提。
 
-When the frontier is thin enough to see the shape of the answer, widen once before
-you narrow. Name the real candidates and the tradeoff each carries — different
-shapes, not one design with different parameters. This is not a menu for the user:
-you still recommend one. It is the evidence that the recommendation beat something,
-and it is where `## Alternatives considered` comes from.
+## 收敛方案
 
-If only one candidate survives your own scrutiny, say which ones died and why. That
-reasoning is the alternatives list.
+当边界收窄、准备定稿前，先做一次「再拓宽」复核：把当前选定方案放回更大视野里，至少对照**最简方案（minimal option）**以及沿途出现过（或仍可能替代）的竞争架构形态做一次横向审视——它们应当是**不同的架构/设计形态**，而不是同一套设计调几个参数。这并不是给用户发选票：你依然只推荐其中一个。它是用来防止局部最优的自我质检，也是 `## Alternatives considered` 的直接依据。
 
-Widening can expose a question you cannot answer. That is a new frontier — go back to
-Rounds rather than recommending under uncertainty.
+如果经过你自己的审视后只剩一个方案存活，说明哪些方案被淘汰了以及为什么。这段淘汰论证就是备选方案列表。
 
-Then:
+拓宽视野时可能会暴露出你无法回答的新问题。那意味着出现了新的边界——回到「逐轮推进」，不要在不确定中强行做推荐。
 
-- Give **one** recommended approach: rationale, effort, risk, and what existing code
-  it builds on.
-- Always include the minimal option — the version that adds the least.
-- Do not hand the widening back as a ballot. It is evidence for the recommendation,
-  not a set of equal options for the user to pick from.
-- Name the most fragile assumption: "This plan assumes X. If X does not hold, Y
-  happens." If it is load-bearing, deform the design to survive its failure instead
-  of planning on hope.
-- Anything that makes every future user install or configure something is a setup
-  cost. Default to the zero-setup form; name why it cannot do the job before
-  offering the setup-requiring one.
+随后给出收敛结果：
 
-Run the attack angles in `references/modes.md` only when the plan involves external
-dependencies, high concurrency, or data migration. If an attack breaks the approach,
-discard it and say why — never present a plan that failed an attack without
-disclosing the failure.
+- 给出**唯一**的推荐方案：理由、工作量、风险，以及它建立在哪些现有代码之上。
+- 必须包含最简方案（minimal option）——即新增改动最少的那一版。
+- 不要把拓宽后的候选列表当成选择题退回给用户。它们是支撑推荐结论的论据，而不是让用户自行挑选的等价菜单。
+- 点出最脆弱的假设：「本计划假设 X 成立；如果 X 不成立，将会导致 Y。」如果该假设是核心承重柱，应当调整设计使其能承受该假设失效，而不是指望运气。
+- 任何需要未来每个使用者额外安装或配置的东西都是环境成本。默认优先采用零配置（zero-setup）形态；只有在说明零配置为什么确实无法胜任之后，才允许提出需要额外配置的方案。
 
-## Gate before exit
+仅当计划涉及外部依赖、高并发或数据迁移时，执行 `references/modes.md` 中的攻击视角（Attack angles）检查。如果某个攻击视角击穿了当前方案，直接舍弃该方案并说明原因——绝不要在隐瞒失败的情况下呈递一个未通过压测的计划。
 
-- **Simplicity.** Every try/catch, retry, fallback, and flag maps to one named
-  failure mode. Delete the layers that only might fail. If the plan is mostly
-  workaround machinery around a misbehaving dependency, the premise is wrong — name
-  the route change instead.
-- **Surface delta.** List new commands, env vars, flags, services. Prefer +0.
-- **Blast radius.** More than ~8 files, or a new service, gets said out loud.
-- **Rollback.** What state can you return to, and how much work is that?
-- **No placeholders.** TBD, TODO, "implement later", "similar to step N" — a plan
-  containing one is a promise to plan later.
-- **Phase independence.** Each phase must be usable on its own if the next never
-  lands. If the work cannot be cut that way, ship one phase. A "Phase 0:
-  investigate" is the same red flag: investigation happens before the plan.
+## 退出前自检
 
-## Output
+- **简洁性（Simplicity）**：每一个 `try/catch`、重试、降级（fallback）和开关标志，都必须对应一个明确命名的失败模式。删掉那些「只是以防万一」的防御层。如果计划的大部分篇幅都在围绕某个行为异常的依赖打补丁，说明前提错了——直接提出替换路径。
+- **暴露面增量（Surface delta）**：列出新增的命令、环境变量、参数标志和服务。尽量追求 +0。
+- **影响半径（Blast radius）**：涉及超过约 8 个文件，或引入新服务时，必须显式说明。
+- **回滚方案（Rollback）**：出问题后能退回到什么状态，回滚成本有多大？
+- **禁止占位符（No placeholders）**：出现 TBD、TODO、「后续实现」、「同第 N 步」——任何包含占位符的计划都是在承诺「以后再规划」。
+- **阶段独立性（Phase independence）**：即使下一阶段永远不会落地，当前阶段也必须能独立使用。如果工作无法这样切分，那就只发一个阶段。出现「Phase 0：调研」属于同类红灯信号：调研应当发生在规划之前，而不是塞进计划里。
 
-- **Building** — what this is, one paragraph.
-- **Not building** — explicit out-of-scope list. This is what stops scope creep.
-- **Approach** — chosen option and why.
-- **Key decisions** — 3-5, with the reasoning that made them decisions.
-- **Unknowns** — only items deliberately deferred, each with a reason and an owner.
-  A vague gap is not an unknown; it is an unfinished plan, so loop back.
+## 产出格式
 
-If the decision is durable — expensive to reverse, or likely to be re-litigated —
-it produces two artifacts:
+对话中先用以下五节向用户收敛结论（若无需写入 ADR，这也是最终交付的计划摘要）：
 
-- `proposed/{class}/yyyy-mm-dd-<slug>.md` — one record per decision, per
-  `.agents/ADR/AGENTS.md`.
-- `proposed/{class}/yyyy-mm-dd-<delivery-slug>.plan.md` — the execution attachment
-  for all of them, in the first record's folder, per `references/plan-file.md`.
+- **构建目标（Building）** — 这是什么，一段话概括。
+- **不做范围（Not building）** — 明确的不做清单。这是防止范围蔓延的防线。
+- **实现方案（Approach）** — 选定的方案及原因。
+- **关键决策（Key decisions）** — 3–5 条，附带促成该决策的推理。
+- **待定事项（Unknowns）** — 仅保留有意延后处理的事项，每项必须注明原因和负责人。含糊的缺口不是待定事项，而是未完成的规划，应当退回继续澄清。
 
-A visual system decision — ramps, type and spacing scales, radius and elevation
-scales, component contracts, dark-mode strategy — is a `design` record. A single
-screen's layout is not a record; it stays in the plan.
+是否落盘为 ADR 与 `.plan.md`，按决策影响力与仓库状态分三条出口处理：
 
-Never write an `implemented/` record for something that has not shipped. The record
-moves there after acceptance, when `mm-land` runs — not before.
+- **不涉及长期影响力决策**（变更可轻易逆转、日后不太可能被反复翻案）：不需要写 ADR，也不要创建无 `ADR:` 头的孤立 `.plan.md`（缺少 `ADR:` 头的计划无法被 `mm-land` 闭环）。直接在对话中确认上述收敛结论及验证点即可。
+- **涉及长期影响力决策，且仓库已初始化 `.agents/ADR/`**：产出两份文件：
+  - `.agents/ADR/proposed/{class}/yyyy-mm-dd-<slug>.md` — 每个决策一份记录，格式遵循 `.agents/ADR/AGENTS.md`。
+  - `.agents/ADR/proposed/{class}/yyyy-mm-dd-<delivery-slug>.plan.md` — 对应所有这些决策的执行附件，存放在主（第一份）记录所在目录下，格式遵循 `references/plan-file.md`。
+- **涉及长期影响力决策，但仓库尚未初始化 `.agents/ADR/`**：先在对话中输出完整方案，并询问用户是否先运行 `mm-setup` 建立 `.agents/ADR/` 再落盘；若用户选择不启用 ADR，则在对话中输出执行步骤与验收清单，不要擅自创建半套目录或无主 `.plan.md`。
 
-The plan file is also the handoff. When the user asks for one, or the environment
-cannot continue, write it rather than explaining why you stopped.
+视觉系统级决策——色板阶梯（ramps）、字号与间距刻度、圆角与层级阴影规范、组件契约、深色模式策略——属于 `design` 类记录。单个页面的具体布局不是 ADR，留在 plan 文件中即可。
 
-If the plan touches a visual surface, its steps name the mm-ui mode that will run them
-(System, Build, Refine). Planning owns what to build and in what order; the direction
-lock happens inside mm-ui, with the user, before any markup.
+绝不要为尚未上线交付的内容写 `implemented/` 记录。记录只有在验收通过、运行 `mm-land` 时才移入 `implemented/`——绝不提前。
 
-## Two gates
+plan 文件同时也是交接单（handoff）。当用户明确要求交接单，或当前环境无法继续推进时，直接把交接计划输出出来（仓库已启用 `.agents/ADR/` 时写入 ADR 与 `.plan.md`，未启用时在对话中按 `Scope / Not in scope / Steps / Verification / Stop points` 结构完整输出），而不是口头解释为什么停下。
 
-The frontier is empty. What remains is two approvals, and the first does not imply
-the second.
+如果计划涉及视觉界面，必须区分项目是否已有设计系统：
 
-1. **Approve the plan.** Write the record and its plan file, then report both paths
-   and the plan's `## Verification` checklist. "可以", "行", "looks good" approve the
-   plan — nothing more.
-2. **Authorize implementation.** Do not read `mm-implement` and do not write any code
-   until the user explicitly says to start: "开工", "开始做", "implement it",
-   "按 plan 做".
+- **已有设计系统**：在对应步骤中标明将使用的 `mm-ui` 模式（`Build`、`Refine`）。规划阶段负责「做什么」以及「按什么顺序做」；具体视觉方向的锁定留在 `mm-ui` 内部与用户共同完成，在动手写任何标记语言之前敲定。
+- **尚无设计系统**：不要把「用 `mm-ui` 的 `System` 模式建设计系统并写 `proposed/design/` ADR」写成业务功能计划的 Step 1——`mm-implement` 禁止执行仍需在步骤中新建 `ADR:` 记录的计划。应当先切入 `mm-ui` 的 `System` 阶段产出 Token 与 `proposed/design/` ADR，再把该记录列入业务计划的 `Constrained by:`；或者先单独规划并交付设计系统本身，业务功能留待其落盘后再规划。
 
-If implementation was already authorized before planning began ("直接做", "别问了"),
-both gates are passed — but write the two files first, state which plan you are
-executing, then proceed.
+## 两道批准门
+
+边界已经清空。剩下的只有两步确认，且第一步批准**不代表**第二步授权。
+
+1. **批准计划**：若本次需落盘 ADR 且仓库已启用 `.agents/ADR/`，写入 ADR 记录与对应的 `.plan.md` 文件，然后向用户汇报两者的路径以及计划中的 `## Verification` 检查清单；若无需落盘（如轻量模式或无长期决策的改动），则等待用户对对话中方案与验收点的确认。「可以」「行」「looks good」仅代表批准计划本身——仅此而已。
+2. **授权实施**：在用户明确说出开始执行指令（「开工」「开始做」「implement it」「按 plan 做」）之前，不要读取 `mm-implement`，也不要编写任何代码（轻量模式获批且用户明确要求动手后，可直接实施无需强走 `mm-implement`）。
+
+如果用户在规划开始前就已经明确授权直接实施（「直接做」「别问了」），则视为两道门同时通过——若本次属于需落盘 ADR 的长期决策且仓库已启用 `.agents/ADR/`，仍需先写好上述两份文件、声明正在执行哪份 plan，然后再开始动手。

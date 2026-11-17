@@ -1,101 +1,72 @@
 ---
 name: mm-land
-description: Close out accepted work by removing its plan file and promoting every ADR the plan lists from proposed/ to implemented/. Use when the user says the work passed acceptance — 验收通过、做完了、可以了、land it、close it out — or asks to finish or clean up an ADR. Never use it on your own judgement that the code looks done.
+description: 在工作验收通过后收尾归档：删除对应的 plan 文件，并将该 plan 列出的所有 ADR 从 proposed/ 升格移入 implemented/。适用于用户明确表示验收通过（如「验收通过」「做完了」「可以了」「land it」「close it out」），或要求收尾、归档某个 ADR 时。绝不要仅凭你主观判断「代码看起来做完了」就擅自调用。
 ---
 
-# Land
+# Land · 验收落盘
 
-Landing is the only transition that turns a proposal into a claim about reality.
-Before it runs, `proposed/` is allowed to be wrong. After it runs, `implemented/`
-must be true.
+「落盘（Landing）」是唯一能把提案变成既成事实的状态迁移。在它运行之前，`proposed/` 里的记录允许有偏差；一旦它运行之后，`implemented/` 里的记录必须与现实完全一致。
 
-## Gate
+## 准入闸门
 
-Land only on an explicit acceptance from the user. Passing tests, a clean diff, and
-a plan whose steps are all done are inputs to acceptance, not acceptance. If the
-user has not said the work is accepted, stop and ask. Moving a record early makes
-`implemented/` lie, and editing it back does not undo that — the lifecycle is
-history.
+仅在用户明确表示验收通过时才能执行落盘。测试通过、diff 干净、计划步骤全部跑完，这些都只是验收的**输入条件**，而不是验收本身。如果用户还没有明确说「验收通过 / 可以了」，停下来询问。过早移动记录会让 `implemented/` 撒谎，哪怕事后改回来也无法抹去痕迹——生命周期本身就是历史。
 
-If the user says the work did not pass, do not land. Ask which line of the plan's
-`## Verification` failed; the plan gets revised, not promoted.
+如果用户表示工作未通过验收，不要执行落盘。询问是计划中 `## Verification` 的哪一行未通过；此时应当修订计划，而不是升格记录。
 
-## Flow
+## 执行流程
 
-1. Find the plan:
+1. 查找计划文件：
 
    ```bash
    ls .agents/ADR/proposed/**/*.plan.md
    ```
 
-   More than one and the user did not say which → ask. Never guess from timestamps.
-   No plan at all → still landable, but say so out loud and take the single record
-   the user names as the list.
+   如果存在多个且用户未指定哪一个 → 询问用户，绝不根据时间戳猜测。如果完全没有 plan 文件 → 依然可以落盘，但必须明确说明这一情况，并以用户指定的单份记录作为待处理列表。
 
-2. Read every `ADR:` line in the header. All of them ship with this plan; the first
-   is the primary record.
+2. 读取文件头部所有的 `ADR:` 行。其中列出的所有记录都将随本计划一并交付；第一条是主记录。
 
-3. For each listed record, check whether it actually landed: its `## Acceptance
-   criteria` satisfied, its decision visible in the code. If any record did not
-   land, stop and offer the two ways out — finish the work, or remove that `ADR:`
-   line and leave the record in `proposed/` for a later delivery. Never promote a
-   record that half-shipped: `implemented/` means delivered, not attempted.
+3. 针对每条列出的记录，核对它是否真的已经落地：它的 `## Acceptance criteria` 是否已满足，它的决策是否在代码中真实可见。如果其中任何一份记录并未实际落地，停下并给出两条出路——补完剩余工作，或将该 `ADR:` 行从计划中移除、让该记录继续留在 `proposed/` 等待后续交付。绝不要升格只交付了一半的记录：`implemented/` 代表「已交付」，不代表「尝试过」。
 
-4. Read the plan's `## Verification` checkboxes. Every line must be checked and
-   carry a result. An unchecked line means that part was not accepted — report which
-   ones and stop. This section is the human's acceptance, not yours.
+4. 检查计划的 `## Verification` 复选框。每一行都必须已勾选，且在旁边记录了实际结果。只要有未勾选的行，就意味着该部分尚未通过验收——报告具体是哪几行并停下。这一节代表的是人的验收，不是你的。
 
-5. Walk `## Steps` and confirm each inline verification actually ran. A step whose
-   command was never run is not done, whatever the checkboxes say. Then check for
-   drift between plan, records, and code: the plan was approved against a state that
-   may have moved since. If a step's premise is gone, or a record's decision no
-   longer matches what shipped, stop. Either the plan is revised, or the record is
-   superseded by a new one — never quietly promoted with a stale decision.
+5. 逐条核对 `## Steps`，确认每一步的内联验证确实实际执行过。如果某一步的验证命令从未运行，无论复选框怎么写的，这一步都不算完成。接着检查计划、ADR 记录与实际代码之间是否存在漂移：计划是在当时的代码状态基础上批准的，后续环境可能已经变化。如果某步的前提已不存在，或某份记录的决策与实际交付不再吻合，停下。此时要么修订计划，要么用一份新记录替代旧决策——绝不要带着过时的决策静默升格。
 
-6. Delete the plan:
+6. 删除计划文件：
 
    ```bash
    rm .agents/ADR/proposed/{class}/{delivery}.plan.md
    ```
 
-7. Promote every record, one at a time:
+7. 逐一升格移动每份记录：
 
    ```bash
    mv .agents/ADR/proposed/{class}/{name}.md \
       .agents/ADR/implemented/{class}/{name}.md
    ```
 
-   A delivery can span classes (`architecture/`, `feature/`, `process/`); each
-   record moves out of its own class folder, not the plan's.
+   一次交付可能横跨多个分类（`architecture/`、`feature/`、`process/`）；每份记录都要从它各自所属的分类目录移出，而不是全按 plan 文件的目录处理。
 
-   Then edit each one, per `.agents/ADR/AGENTS.md`:
+   随后按照 `.agents/ADR/AGENTS.md` 编辑每份记录：
 
-   - `Status: proposed` → `Status: implemented`
-   - `## Proposal` → `## Decision`, present tense, describing what shipped
-   - fold `## Acceptance criteria` and `## Risks` into `## Consequences`
-   - correct facts that moved during implementation — paths, names, defaults. Facts
-     only. If the decision itself changed, stop: that is a new record.
+   - 将 `Status: proposed` 改为 `Status: implemented`
+   - 将 `## Proposal` 改为 `## Decision`，改用现在时态描述已交付的现实
+   - 将 `## Acceptance criteria` 和 `## Risks` 的内容归并进 `## Consequences`
+   - 修正实施过程中发生变化的客观事实——路径、名称、默认值。仅限修正事实；如果核心决策本身变了，停下：那需要起草一份新记录。
 
-8. Repair inbound links. Relative links encode the lifecycle folder, so every link
-   to an old path now breaks. Grep each moved record:
+8. 修复入站链接（inbound links）。因为相对路径里编码了生命周期目录，所有指向旧路径的链接现在都会失效。对每份被移动的记录执行检索：
 
    ```bash
    grep -rn "proposed/{class}/{name}" .agents/ADR AGENTS.md docs 2>/dev/null
    ```
 
-   Rewrite each hit to the `implemented/` path. Never edit an archived record to
-   repair a link out of it.
+   将每一处命中改写为新的 `implemented/` 路径。绝不要为了修复出站链接而修改 `archived/` 中的历史记录。
 
-9. Report the plan deleted, the records moved, the sections rewritten, the links
-   repaired, and anything still owed — a PR, a release note, a follow-up record.
-   Leave the change uncommitted and say so; staging and committing it is the user's
-   call.
+9. 向用户汇报：已删除的 plan 文件、已移动的记录、已重写的章节、已修复的链接，以及任何仍待跟进的事项（如提 PR、写发布说明、补充后续记录等）。保持改动处于未提交状态并告知用户；何时暂存与提交由用户决定。
 
-## Exit condition
+## 退出条件
 
-- No `.plan.md` remains for this delivery.
-- Every record the plan listed sits under `implemented/` with `Status: implemented`.
-- No `## Proposal`, `## Plan`, `## Acceptance criteria`, or `## Risks` heading
-  survives in any of them.
-- No inbound link points at an old `proposed/` path.
-- The user has been told exactly what changed.
+- 本次交付对应的 `.plan.md` 已不再存在。
+- 计划中列出的每份记录均已位于 `implemented/` 下，且状态为 `Status: implemented`。
+- 这些记录中不再残留任何 `## Proposal`、`## Plan`、`## Acceptance criteria` 或 `## Risks` 标题。
+- 不存在任何仍指向旧 `proposed/` 路径的入站链接。
+- 已明确向用户报告所有变更细节。

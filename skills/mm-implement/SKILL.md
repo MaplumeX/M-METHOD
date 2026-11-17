@@ -1,84 +1,58 @@
 ---
 name: mm-implement
-description: Execute an approved plan file one step at a time, verifying each step before moving on. Use when the user says 按 plan 做、开工、开始实现、继续做、implement the plan, or asks what is left of a plan. Requires an existing .plan.md — without one this is planning or a small edit.
+description: 按已批准的 plan 文件逐步骤执行开发，每完成一步即验证该步后再推进下一步。适用于用户明确要求「按 plan 做」「开工」「开始实现」「继续做」「implement the plan」，或询问计划还剩多少未完成时。需要仓库中已存在 .plan.md——若不存在，则当前属于规划（mm-plan）或微小的直接修改。
 ---
 
-# Implement
+# Implement · 按计划实施
 
-A plan is a promise made before the work existed. Executing it is mostly a
-discipline problem: the code is the easy part, and the failures are scope creep,
-skipped verification, and decisions changed on the fly to fit the code.
+计划是在代码尚不存在时立下的契约。执行计划本质上是一个纪律问题：写代码往往是简单的部分，真正导致失败的是范围蔓延、跳过验证，以及为了迁就代码而临时篡改已定决策。
 
-## Entry
+## 入口检查
 
-Find the plan:
+查找当前计划文件：
 
 ```bash
 ls .agents/ADR/proposed/**/*.plan.md
 ```
 
-More than one and the user did not say which → ask. None → this is not the skill's
-job: a small edit just gets done, and anything larger goes back to `mm-plan`. If the
-user insists on proceeding without a plan, say out loud that the work is unplanned
-and record the deviation in the report.
+如果存在多个计划且用户没有指定执行哪一个 → 询问用户。如果一个都没有 → 不属于本 skill 的职责：微小的改动直接修改即可，较大的需求应退回 `mm-plan`。如果用户坚持在没有计划的情况下直接推进，必须明确声明当前工作属于「无计划开发」，并在最终报告中记录这一偏离。
 
-Read the plan and the record its `ADR:` line points to. The record is read-only
-here: it explains constraints, it does not authorize edits.
+通读该 plan 文件以及其头部 `ADR:` 行指向的所有记录。在此阶段，ADR 记录是只读的：它用于解释约束边界，不授权对决策本身的修改。
 
-The plan's `ADR:` records already exist when execution starts. A step that would
-have to create a record is a planning step that was left in the plan — stop and
-route it back to `mm-plan`. This is why a missing design system gets built during
-planning, not as step one of the delivery.
+当执行开始时，计划里 `ADR:` 指向的记录必须已经存在。如果计划里还有一步要求「去创建某份 ADR」，说明规划阶段遗漏了前置决策——立刻停下并退回 `mm-plan`。这也是为什么缺失的设计系统必须在规划期补齐，而不是作为交付的第一步临时去搭。
 
-## Preflight
+## 实施前检查（Preflight）
 
-- Walk `## Prerequisites`. Anything missing gets reported as missing — never mocked,
-  never silently skipped, never "temporarily stubbed".
-- Check the working tree. Uncommitted work that is not yours means stop and ask
-  before touching the same files.
+- 逐项核对 `## Prerequisites`。任何缺失的前置条件必须如实报告为缺失——绝不 mock、绝不静默跳过、绝不「先临时打个桩」。
+- 检查工作区（working tree）。如果发现并非由你产生的未提交改动，且即将触及相同文件，先停下来询问用户。
 
-## Steps
+## 推进步骤
 
-Work the steps in order without asking permission between them. Stop on a failed
-verification, a triggered stop point, or a disagreement with the record — not on
-every step boundary.
+按顺序执行各个步骤，步骤之间无需逐一请示。仅在验证失败、触发停机点（stop point）或现实与 ADR 发生冲突时停下——不要在每一步结束时停下来要许可。
 
-- After each step, run that step's inline verification. A step without a green check
-  is not finished, and the next step waits.
-- `## Not in scope` is a list of things not to do. A problem found there gets
-  recorded in the report and left alone; fixing it is how a two-step change becomes
-  a review nobody can read.
-- When a comment is needed to explain a constraint, write it in the same edit that
-  writes the code, following the record standard's `## References from code`: the
-  consequence first, then `ADR <date>-<slug>`. Adding them in a final pass produces
-  pointers with no consequence, and misses the places that needed one.
-- If the user names a subset of steps, do that subset and state what stayed undone.
+- 每完成一步，立刻执行该步内联的验证命令。没有绿灯通过的步骤不算完成，不得进入下一步。
+- `## Not in scope` 是明确的「禁止事项」清单。即使在范围之外发现了问题，也只需记入最终报告并保持原样；顺手把它们修了，正是两步改动变成无人能读懂的巨大 diff 的原因。
+- 需要写注释解释某项约束时，在写下对应代码的那一次编辑中同步写好，并遵循 ADR 规范中的 `## References from code` 格式：先写清约束后果，再附上 `ADR <date>-<slug>`。如果留到最后统一补注释，写出来的往往只有空洞的编号而没有后果说明，还会漏掉真正需要解释的位置。
+- 如果用户仅指定执行部分步骤，只完成指定子集，并明确说明哪些步骤仍未执行。
 
-## When reality disagrees
+## 当现实与计划不符时
 
-- The record's decision does not hold → stop, say why, and route back to `mm-plan`
-  for a superseding record. Never rewrite the record to match the code.
-- A step's premise is gone (file moved, dependency changed, API differs) → stop and
-  report. Either the plan is revised or the approach changes; picking one silently
-  is how the plan and the code stop describing the same thing.
-- A stop point triggers → stop and ask. That is what it is for.
+- 发现 ADR 中的决策不再成立 → 停下，说明原因，并退回 `mm-plan` 以起草替代的新记录。绝不要为了迎合代码去改写原 ADR。
+- 某一步的前提条件已失效（文件被移动、依赖已变更、API 与预期不一致） → 停下并汇报。此时要么修订计划，要么调整实现路径；绝不要默默二选一——静默偏离正是计划与代码开始各说各话的起点。
+- 触发了计划中的停机点（stop point） → 停下并询问用户。这正是设置停机点的意义。
 
-## Report
+## 汇报结果
 
-- Steps completed, with the result of each inline verification.
-- `## Verification` lines you could run and what they returned. Lines that need a
-  human stay unchecked — ticking them is signing for someone else's acceptance.
-- Anything found and deliberately not fixed, with the reason.
-- Whether the plan needs revising before the rest can proceed.
+- 已完成的步骤，以及每一步内联验证的真实执行结果。
+- 你能够执行的 `## Verification` 检查项及其返回结果。需要人工判断的检查项保持未勾选状态——替人打勾相当于替别人签字验收。
+- 发现但有意未修复的问题，并说明理由。
+- 后续工作继续推进前，计划本身是否需要修订。
 
-Do not commit unless asked. Do not move the record, do not delete the plan, and do
-not run `mm-land` — promotion belongs to the user's acceptance, not to the code
-being green.
+除非用户要求，否则不要执行 `git commit`。不要移动 ADR 记录，不要删除 plan 文件，也不要运行 `mm-land`——将记录升格归档属于用户的验收动作，而不取决于测试是否跑绿。
 
-## Exit condition
+## 退出条件
 
-- Every step completed with a recorded verification.
-- Every automatable line in `## Verification` run, with its result written beside
-  the checkbox.
-- The record still sits in `proposed/`, the plan is still in place.
-- The user has been told what to check manually and what was left undone.
+- 所有步骤均已完成，且每一步都有记录在案的验证结果。
+- `## Verification` 中所有可自动执行的检查项均已运行，并将结果写在了对应复选框旁。
+- ADR 记录仍留在 `proposed/`，plan 文件也依然保留在原位。
+- 已明确告知用户哪些项需要人工核验，以及还有哪些工作尚未完成。

@@ -1,207 +1,160 @@
 ---
 name: mm-ui
-description: Design rules and workflow for web UI, distilled from Refactoring UI. Four modes — design system, build, refine, review — with three disciplines that cut across all of them. Use when building or changing a page, component, or design system, or when something "looks off" but nobody can say why — 界面设计、样式调整、UI 太丑、设计评审、视觉层级、配色、对比度、间距、排版、阴影、空状态、设计规范. Not for backend logic, copy editing, or changes with no visual surface.
+description: 提炼自《Refactoring UI》的 Web UI 设计规则与工作流。包含四种模式——System（设计系统）、Build（构建）、Refine（调优）、Review（评审）——以及贯穿始终的三项工程纪律。适用于构建或修改页面、组件、设计系统，或界面「看起来不对劲但说不出哪里怪」时（如「界面设计」「样式调整」「UI 太丑」「设计评审」「视觉层级」「配色」「对比度」「间距」「排版」「阴影」「空状态」「设计规范」）。不适用于后端逻辑、纯文案修改或没有视觉呈现的改动。
 ---
 
-# UI
+# UI · 界面设计与调优
 
-Work that has a visual surface. Four modes, three disciplines.
+处理一切带有视觉呈现的工作。四种模式，三项纪律。
 
-Out of scope: backend logic, copy editing, changes nobody can see. This is not an
-aesthetic generator either — it constrains and checks, it does not supply taste.
+不在范围内：后端逻辑、纯文案编辑、用户看不见的底层改动。本 skill 也不是审美生成器——它负责约束与检查，而不是替你凭空编造品味。
 
-## Step 0 · Read the project before judging it
+## Step 0 · 先读项目，再做判断
 
-Run this before any design claim. It prevents the two worst failures: fighting a
-design system that already exists, and emitting values the project cannot use.
+在提出任何设计结论前先执行这一步。它能避免两个最严重的失误：与项目已有的设计系统打架，或者产出项目根本无法落地的值。
 
-Report briefly:
+简短汇报以下 5 项：
 
-1. **Framework** — React / Vue / Svelte / plain HTML; SSR or SPA.
-2. **Existing tokens** — CSS custom properties, a theme object, `tokens.json`, a
-   `theme/` directory, a Tailwind config.
-3. **Component library** — shadcn/ui, MUI, Ant Design, Chakra, Radix. These carry
-   their own token contracts; read them before writing a component.
-4. **Dark mode** — present, planned, absent.
-5. **Existing type and spacing scales** — their real values, lifted from config, never
-   from memory.
+1. **框架（Framework）** — React / Vue / Svelte / 原生 HTML；SSR 还是 SPA。
+2. **现有 Token（Existing tokens）** — CSS 自定义属性、theme 对象、`tokens.json`、`theme/` 目录、Tailwind 配置。
+3. **组件库（Component library）** — shadcn/ui、MUI、Ant Design、Chakra、Radix。它们各自带着自己的 token 契约；写组件前先读懂它们。
+4. **深色模式（Dark mode）** — 已支持、规划中，还是无。
+5. **现有字号与间距刻度（Existing scales）** — 从配置文件中提取真实值，绝不凭记忆瞎猜。
 
-**An existing system always wins.** Where there is one, translate these principles
-into its vocabulary. Where there is none, propose one. Never overwrite, never silently
-migrate, never add a build-time dependency nobody asked for.
+**项目现有系统永远优先。** 如果已有体系，把本 skill 的原则翻译成它的词汇来用；如果还没有，再提出新建方案。绝不直接覆盖、绝不静默迁移、绝不擅自引入没人要求的构建期依赖。
 
-## Pick a mode
+## 选择模式
 
-Ask in this order, stop at the first hit:
+按以下顺序排查，命中第一项即停止：
 
-1. Does the project have a design system? No → **System**
-2. Is something new being added? → **Build**
-3. Should the interface change? → **Refine**
-4. Only an opinion is wanted? → **Review**
+1. 项目已经有设计系统了吗？没有 → 进入 **System**
+2. 正在新增界面内容？ → 进入 **Build**
+3. 需要修改现有界面？ → 进入 **Refine**
+4. 只需要给意见而不改代码？ → 进入 **Review**
 
-When intents mix, run System → Build → Refine in that order and say which leg you are
-on. Each mode's **stop points** are the only handoffs between them.
+当多种意图混杂时，按 `System → Build → Refine` 的顺序分阶段推进，并明确说出当前处于哪一段。每种模式的**停机点（stop points）**是它们之间唯一的交接边界。
 
-## System · Establish or change the design system
+## System · 建立或修改设计系统
 
-**Enters when**: no system exists, the system is being replaced, or a scale is missing.
+**进入时机**：项目尚无设计系统、正在替换旧系统，或缺少某套刻度。
 
-1. Interview: brand color, neutral temperature (cool/warm), product personality, dark
-   mode. Batch the questions, allow every one to be skipped, allow defaults.
-2. Build nine-step ramps: base 500 → 900/100 → 700/300 → the rest. Raise saturation as
-   lightness moves away from 50%.
-3. Check contrast: 4.5:1 body / 3:1 large, with `scripts/check_contrast.py`, not by eye.
-4. Emit four files: `tokens.json` / `tokens.css` / `DESIGN.md` / `preview.html`.
-5. Record a `proposed/design/` ADR.
+1. 访谈收集：品牌色、中性色冷暖倾向（冷灰/暖灰）、产品性格、深色模式需求。问题尽量打包一次问完，允许跳过任意一项，也允许使用默认值。
+2. 构建 9 阶色板：基准 500 → 900 / 100 → 700 / 300 → 补齐其余色阶。当亮度偏离 50% 向两端移动时，提高饱和度。
+3. 校验对比度：正文至少 4.5:1、大号文本至少 3:1，必须运行 `scripts/check_contrast.py` 检查，禁止肉眼目测。
+4. 产出四份文件：`tokens.json` / `tokens.css` / `DESIGN.md` / `preview.html`。
+5. 记录一份 `proposed/design/` 下的 ADR。
 
-Details in `11-tokens.md`; for a Tailwind expression see `12-tailwind.md` (optional
-mapping).
+具体做法见 `11-tokens.md`；若项目使用 Tailwind，可参考 `12-tailwind.md` 做映射（仅作可选映射）。
 
-**Stops at**: ramp direction, token naming. Both are expensive to change later —
-ask before committing.
+**停机点**：色板方向、Token 命名。这两项日后修改代价极高——定稿前必须先向用户确认。
 
-**Done when**: `preview.html` has no step you cannot justify; every contrast pair
-passes; the record exists.
+**完成标准**：`preview.html` 里没有任何你解释不清用途的色阶或刻度；所有对比度组合均校验通过；ADR 记录已落盘。
 
-## Build · Add an interface
+## Build · 新增界面
 
-**Enters when**: a new page, component, or feature block.
+**进入时机**：新建页面、组件或功能区块。
 
-If the work needs a plan first (a new feature, more than one page), the plan owns the
-information architecture and the step order; this mode owns the direction and the
-execution.
+如果该工作本身需要先做规划（例如新功能、跨多个页面），由 `mm-plan` 负责信息架构与步骤顺序；本模式负责锁定视觉方向与实际落地执行。
 
-The order is the method. Out of order produces over-decorated, under-structured
-screens.
+**顺序就是方法本身。** 搞乱顺序就会做出过度装饰、结构松散的界面。
 
-0. **Lock the direction** (`15-direction.md`). Name the aesthetic in specific terms and
-   pick one signature — "clean and modern" is not a direction. State the visual thesis,
-   the content plan and the interaction thesis in three lines before any markup.
-1. Start with a feature, not a shell. `§1.1`
-2. Work in grayscale — force spacing, size and contrast to carry the hierarchy. `§1.2.1`
-3. Rank the content primary / secondary / tertiary, and the actions one primary / a few
-   secondary / several tertiary. `§2.1 §2.8`
-4. Lay out from the scale. `§3.2 §4.1`
-5. Set measure and rhythm: 45–75 characters, line-height matched to width and size.
-   `§4.3 §4.5`
-6. Then color, then depth, then finishing — in that order. `§5 §6 §8`
-7. The empty state belongs to the feature, designed with it. `§8.4`
+0. **锁定方向（Lock the direction）**（见 `15-direction.md`）。用具体的词汇命名美学风格并确定一个标志性特征——「简洁现代（clean and modern）」不是方向。在写任何标记语言前，先用三行分别陈述视觉主题（visual thesis）、内容规划（content plan）和交互假设（interaction thesis）。
+1. 从具体功能入手，而不是先搭空壳（shell）。`§1.1`
+2. 先用纯灰度工作——逼迫间距、字号和明暗对比来承担视觉层级。`§1.2.1`
+3. 对内容进行优先级分级（主 / 次 / 辅），并对操作进行分级（1 个主操作 / 少量次操作 / 若干弱操作）。`§2.1 §2.8`
+4. 严格从预设刻度中取用间距与字号布局。`§3.2 §4.1`
+5. 设定行宽与阅读节奏：每行 45–75 个字符，行高随行宽与字号匹配。`§4.3 §4.5`
+6. 然后再上色，再加景深（阴影/层级），最后做收尾细节——严格按此顺序。`§5 §6 §8`
+7. 空状态属于功能本身的一部分，与主功能同步设计。`§8.4`
 
-Look up common components in `10-recipes.md` instead of re-deriving them.
+常见组件直接查阅 `10-recipes.md`，不要每次重新发明。
 
-**Before the first line of markup**, write a constraint brief as a comment in the
-file: the content ranking, plus the token values steps 4–6 will draw from. A single
-generation pass collapses "grayscale first, then rank, then color" into "write the
-colored markup directly", because nothing forces the order to surface. The comment
-makes the process checkable.
+**在写下第一行标记语言之前**，先在文件里以注释形式写一份约束简报（constraint brief）：列出内容分级，以及第 4–6 步将要取用的 Token 值。一次性生成代码很容易把「先灰度、再分级、后上色」坍缩成「直接写死带颜色的模板」，因为没有任何机制强迫你按顺序思考。这份注释能让过程变得可检查。
 
-**Stops at**: design direction (not detail), a missing scale (go to System).
+**停机点**：设计方向（不是抠细节）、缺少基础刻度（转回 System）。
 
-**Done when**: screenshots exist, every change traces to a rule id, the empty state is
-there, and the AI Slop Test in `15-direction.md` has been run.
+**完成标准**：已产出截图、每处改动都能追溯到具体规则编号、空状态已实现，且已跑过 `15-direction.md` 中的 AI Slop Test。
 
-## Refine · Change an existing interface
+## Refine · 调整现有界面
 
-**Enters when**: "something feels off", "make it look better", design debt.
+**进入时机**：「感觉有点怪」「让它更好看点」、清理设计债务。
 
-1. Screenshot first: desktop and mobile widths.
-2. Check `09-antipatterns.md` — if the symptom is listed, you already have the rule id.
-   Otherwise sweep the seven lenses and **stop at the first one that explains the
-   complaint**; the later ones are usually its consequences.
+1. 先截图：同时截取桌面端和移动端宽度。
+2. 先查 `09-antipatterns.md`——如果症状已经在列表中，你直接拿到了规则编号。否则按顺序扫一遍以下七个诊断透镜，并在**第一个能解释当前抱怨的透镜处停下**；后面的维度往往只是它的连带后果。
 
-   | # | Lens | File |
+   | # | 诊断透镜 | 参考文件 |
    |---|---|---|
-   | 1 | Hierarchy | `02-hierarchy.md` |
-   | 2 | Layout and spacing | `03-spacing.md` |
-   | 3 | Typography | `04-typography.md` |
-   | 4 | Color | `05-color.md` |
-   | 5 | Depth | `06-depth.md` |
-   | 6 | Images | `07-images.md` |
-   | 7 | Finishing | `08-finishing.md` |
+   | 1 | 视觉层级（Hierarchy） | `02-hierarchy.md` |
+   | 2 | 布局与间距（Layout and spacing） | `03-spacing.md` |
+   | 3 | 排版（Typography） | `04-typography.md` |
+   | 4 | 色彩（Color） | `05-color.md` |
+   | 5 | 景深（Depth） | `06-depth.md` |
+   | 6 | 图片与图形（Images） | `07-images.md` |
+   | 7 | 收尾细节（Finishing） | `08-finishing.md` |
 
-3. **Change one lens at a time** → screenshot again → compare → next. Adjusting
-   spacing means adjusting only spacing.
-4. Submit as a reviewable diff, each change citing its rule id.
+3. **每次只改一个透镜** → 重新截图 → 对比效果 → 再进下一个。调整间距时就只调间距。
+4. 以可审阅的 diff 提交结果，每处改动附上对应的规则编号。
 
-**Stops at**: a needed token (go to System), a wrong direction (go back to Build).
+**停机点**：缺少必要的 Token（转去 System）、整体方向错了（退回 Build）。
 
-**Done when**: before/after screenshots exist, every change traces to a rule id.
+**完成标准**：存在修改前后的对比截图，且每处修改都能追溯到具体的规则编号。
 
-## Review · Judge without changing
+## Review · 只评审不改代码
 
-**Enters when**: "take a look", "what is wrong here", a pre-launch check, or a pasted
-screenshot.
+**进入时机**：「帮忙看看」「这里有什么问题」、上线前检查，或用户贴了一张截图。
 
-Same as Refine steps 1–2, with no code changes.
+流程与 Refine 的第 1–2 步相同，但不修改任何代码。
 
-**Produces** a findings report: **symptom → rule id → concrete fix**, ordered by
-severity, not by lens. Run the AI Slop Test in `15-direction.md` alongside it: a report
-that misses "these are three identical cards" reviewed compliance, not the design.
+**产出**一份问题报告：**症状 → 规则编号 → 具体修复建议**，按严重程度排序，而不是按透镜顺序罗列。同时运行 `15-direction.md` 中的 AI Slop Test：一份连「这是三张毫无区分度的同款卡片」都漏掉的评审报告，检查的只是合规性，而不是设计本身。
 
-**Done when**: every finding carries a rule id, and anything you did not look at is
-stated as not looked at. A finding without a rule id is an opinion — and an opinion is
-what the user already had when they said something felt off.
+**完成标准**：每条发现都带有规则编号，并且明确声明哪些部分没有检查。没有规则编号的发现只是个人意见——而「觉得不对劲」的个人意见，用户在找你之前就已经有了。
 
-## Three disciplines
+## 三项纪律
 
-**1. Change one lens at a time.** The biggest trap in UI work is changing everything
-at once — spacing, weight, shadow — and concluding "it looks better overall". Next
-time something breaks you cannot tell which change caused it. Change one dimension,
-look, then the next.
+**1. 每次只改一个透镜。** UI 调整中最大的陷阱就是把间距、字重、阴影全改了一遍，然后得出结论「整体看起来更好了」。下一次某个地方崩掉时，你根本分不清是哪一处改动引起的。只改一个维度，看效果，然后再改下一个。
 
-**2. Evidence before opinion.** Say what is in the screenshot — how many spacing steps
-are in play, what repeats, what the contrast ratio is — before saying what should
-change. "Add more white space" without that is noise, and nobody knows what it points
-at.
+**2. 事实证据先于修改意见。** 先说出截图里客观存在什么——当前用到了几档间距、哪些元素在重复、对比度具体是多少——然后再说应该改什么。不带证据的「多留点白」只是噪音，谁也不知道该改哪里。
 
-**3. A rule id is the only arguable unit.** "This feels cramped" cannot be discussed.
-"Violates §3.6: group spacing equals within-group spacing" can. Every finding and
-every change carries an id.
+**3. 规则编号是唯一可讨论的最小单元。** 「这里感觉太挤了」没法讨论；「违反 `§3.6`：组间距等于组内间距」可以明确讨论和验证。每一条评审发现与每一处改动都必须携带规则编号。
 
-## Visual evidence
+## 视觉证据
 
-**No visual claim without looking.** Render when the environment allows — a dev server
-plus screenshots at desktop and mobile widths. Reading markup and CSS finds spacing and
-structure problems; it cannot find "the shadow looks dirty" or "the hierarchy does not
-land".
+**不看渲染效果不做视觉结论。** 只要环境允许（本地开发服务 + 桌面端与移动端截图），就必须实际渲染并查看截图。光读标记语言和 CSS 能发现间距与结构问题，但发现不了「阴影看起来很脏」或「视觉层级没立起来」。
 
-When rendering is impossible (no browser, no network, a library-only change), say so in
-the report and mark which conclusions were not visually checked.
+如果确实无法渲染（无浏览器环境、无网络、仅改动基础库），必须在报告中明确说明，并标出哪些结论未经视觉核验。
 
-## Decisions become records
+## 决策记录化
 
-A UI decision that outlives one screen is an ADR, not a comment:
+生命周期超过单个页面的 UI 决策应沉淀为 ADR，而不是留在代码注释里：
 
-| Decision | Where |
+| 决策类型 | 存放位置 |
 |---|---|
-| color ramps, spacing scale, type scale, radius and elevation scales | `proposed/design/` |
-| component library or design-system choice | `proposed/design/` |
-| dark-mode strategy | `proposed/design/` |
-| one screen's layout tradeoffs | not a record — it belongs in the plan |
+| 色板阶梯、间距刻度、字号刻度、圆角与阴影刻度 | `proposed/design/` |
+| 组件库或设计系统选型 | `proposed/design/` |
+| 深色模式策略 | `proposed/design/` |
+| 单个页面的局部布局权衡 | 不写 ADR——留在 plan 文件中 |
 
-Follow `.agents/ADR/AGENTS.md` when writing one. A single screen's styling is not worth
-recording; the system it draws from is.
+撰写记录时遵循 `.agents/ADR/AGENTS.md`。单个页面的样式微调不值得立档，它所依托的设计系统规范才值得记录。
 
-## Reference library
+## 参考资料库
 
-151 rules, split by diagnostic lens, each carrying a `§id` that resolves against
-`00-coverage.md`.
+共 151 条规则，按诊断透镜拆分，每条规则都有一个可在 `00-coverage.md` 中查到的 `§id` 编号。
 
-| File | Contents |
+| 文件 | 内容 |
 |---|---|
-| `01-starting.md` | Starting from scratch: when to decide (17) |
-| `02-hierarchy.md` | Hierarchy (20) |
-| `03-spacing.md` | Layout and spacing (18) |
-| `04-typography.md` | Typography (28) |
-| `05-color.md` | Color (22) |
-| `06-depth.md` | Depth (17) |
-| `07-images.md` | Images (14) |
-| `08-finishing.md` | Finishing touches (12) |
-| `09-antipatterns.md` | Symptom → rule id index |
-| `10-recipes.md` | Buttons, form groups, cards, empty states, tables, dropdowns, modals, alerts |
-| `11-tokens.md` | Building a token system from zero |
-| `12-tailwind.md` | Optional mapping, never a binding |
-| `13-beyond.md` | Dark mode, focus, target sizes, motion, breakpoints, z-index, semantic tokens |
-| `14-laws.md` | Twelve laws and the hard gates |
-| `15-direction.md` | Direction lock, absolute bans, the AI Slop Test |
-| `00-coverage.md` | All 151 rules and where they live |
+| `01-starting.md` | 从零开始：何时做哪些决策（17） |
+| `02-hierarchy.md` | 视觉层级（20） |
+| `03-spacing.md` | 布局与间距（18） |
+| `04-typography.md` | 排版（28） |
+| `05-color.md` | 色彩（22） |
+| `06-depth.md` | 景深（17） |
+| `07-images.md` | 图片与图形（14） |
+| `08-finishing.md` | 收尾细节（12） |
+| `09-antipatterns.md` | 症状 → 规则编号速查索引 |
+| `10-recipes.md` | 常见组件配方：按钮、表单组、卡片、空状态、表格、下拉菜单、弹窗、提示条 |
+| `11-tokens.md` | 从零构建 Token 体系 |
+| `12-tailwind.md` | Tailwind 可选映射（非强绑定） |
+| `13-beyond.md` | 深色模式、焦点态、触控热区、动效、断点、z-index、语义化 Token |
+| `14-laws.md` | 十二条铁律与硬性闸门 |
+| `15-direction.md` | 方向锁定、绝对禁区与 AI Slop Test |
+| `00-coverage.md` | 全部 151 条规则总览与定位索引 |
