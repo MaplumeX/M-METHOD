@@ -74,7 +74,7 @@ Hierarchy & empty state: <content ranks, single primary action, §8.4 empty-stat
 
 ## Completion criteria (all 5 required; no subjective adjectives)
 
-1. **Read Gate & Brief**: all 6 required lenses read and the 9-key brief comment is complete.
+1. **Read Gate & Brief**: all 8 required files read and the 9-key brief comment is complete.
 2. **Automated Gates**: `scripts/check_ui_rules.py <target> --brief <brief-file>` (plus `scripts/check_contrast.py` if colors were added/changed) exits `0`.
 3. **Comparison Screenshots & Negative Audit**:
    - Capture **`1440px` wide + `400px` narrow + empty state** screenshots (plus Pass 1 grayscale or sibling/`preview.html` comparison).

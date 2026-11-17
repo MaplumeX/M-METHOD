@@ -15,7 +15,7 @@ Read before starting:
 If invoked from `mm-plan` (or before user confirmation/authorization):
 
 - **Write zero files**: do not create `tokens.json`, `tokens.css`, `DESIGN.md`, `preview.html`, ADR files, or `.plan.md`.
-- Run `scripts/check_contrast.py` directly with inline `"fg:bg"` pairs (no temporary清单 files).
+- Run `scripts/check_contrast.py` directly with inline `"fg:bg"` pairs (no temporary list files).
 - Return the design-system draft (ramps, typography/spacing/radius/elevation scales, semantic mapping, contrast results, and planned target paths) to `mm-plan` for user approval.
 
 ## Workflow
