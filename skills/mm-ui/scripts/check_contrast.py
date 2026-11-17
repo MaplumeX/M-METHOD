@@ -15,13 +15,31 @@ Thresholds: 4.5:1 for body text, 3:1 for large text (>=18px, or >=14px bold).
 from __future__ import annotations
 
 import argparse
+import colorsys
 import sys
 
 BODY = 4.5
 LARGE = 3.0
 
 
+def _split_css_args(inner: str) -> list[str]:
+    """Split comma- or whitespace-separated CSS color function arguments."""
+    if "," in inner:
+        return [p.strip() for p in inner.split(",")]
+    return inner.split()
+
+
+def _parse_percent(token: str) -> float:
+    if not token.endswith("%"):
+        raise ValueError(f"expected percentage: {token!r}")
+    val = float(token[:-1])
+    if not 0.0 <= val <= 100.0:
+        raise ValueError(f"percentage out of range: {token!r}")
+    return val / 100.0
+
+
 def parse_color(value: str) -> tuple[int, int, int]:
+    """Parse #rgb, #rrggbb, rgb(...), or hsl(...) into an 8-bit RGB tuple."""
     v = value.strip().lower()
     if v.startswith("#"):
         v = v[1:]
@@ -33,9 +51,20 @@ def parse_color(value: str) -> tuple[int, int, int]:
         except ValueError:
             pass
     if v.startswith("rgb(") and v.endswith(")"):
-        parts = [p.strip() for p in v[4:-1].split(",")]
+        parts = _split_css_args(v[4:-1])
         if len(parts) == 3:
-            return tuple(int(p) for p in parts)  # type: ignore[return-value]
+            rgb = tuple(int(p) for p in parts)
+            if all(0 <= c <= 255 for c in rgb):
+                return rgb  # type: ignore[return-value]
+    if v.startswith("hsl(") and v.endswith(")"):
+        parts = _split_css_args(v[4:-1])
+        if len(parts) == 3:
+            h_raw = parts[0].removesuffix("deg")
+            h = (float(h_raw) % 360.0) / 360.0
+            s = _parse_percent(parts[1])
+            l = _parse_percent(parts[2])
+            r, g, b = colorsys.hls_to_rgb(h, l, s)
+            return (round(r * 255), round(g * 255), round(b * 255))
     raise ValueError(f"cannot parse color: {value!r}")
 
 

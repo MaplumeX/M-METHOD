@@ -9,16 +9,16 @@ description: 在工作验收通过后收尾归档：删除对应的 plan 文件�
 
 ## 准入闸门
 
-仅在用户明确表示验收通过时才能执行落盘。测试通过、diff 干净、计划步骤全部跑完，这些都只是验收的**输入条件**，而不是验收本身。如果用户还没有明确说「验收通过 / 可以了」，停下来询问。过早移动记录会让 `implemented/` 撒谎，哪怕事后改回来也无法抹去痕迹——生命周期本身就是历史。
+仅在用户明确表示验收通过（或明确指示放弃/归档某份记录）时才能执行生命周期迁移。测试通过、diff 干净、计划步骤全部跑完，这些都只是验收的**输入条件**，而不是验收本身。如果用户还没有明确说「验收通过 / 可以了」，停下来询问。过早移动记录会让 `implemented/` 撒谎，哪怕事后改回来也无法抹去痕迹——生命周期本身就是历史。
 
 如果用户表示工作未通过验收，不要执行落盘。询问是计划中 `## Verification` 的哪一行未通过；此时应当修订计划，而不是升格记录。
 
-## 执行流程
+## 执行流程（交付升格：`proposed/` → `implemented/`）
 
 1. 查找计划文件：
 
    ```bash
-   ls .agents/ADR/proposed/**/*.plan.md
+   find .agents/ADR/proposed -name '*.plan.md' 2>/dev/null | sort
    ```
 
    如果存在多个且用户未指定哪一个 → 询问用户，绝不根据时间戳猜测。如果完全没有 plan 文件 → 依然可以落盘，但必须明确说明这一情况，并以用户指定的单份记录作为待处理列表。
@@ -37,14 +37,15 @@ description: 在工作验收通过后收尾归档：删除对应的 plan 文件�
    rm .agents/ADR/proposed/{class}/{delivery}.plan.md
    ```
 
-7. 逐一升格移动每份记录：
+7. 逐一升格移动每份记录（先确保目标分类目录存在）：
 
    ```bash
+   mkdir -p .agents/ADR/implemented/{class}
    mv .agents/ADR/proposed/{class}/{name}.md \
       .agents/ADR/implemented/{class}/{name}.md
    ```
 
-   一次交付可能横跨多个分类（`architecture/`、`feature/`、`process/`）；每份记录都要从它各自所属的分类目录移出，而不是全按 plan 文件的目录处理。
+   一次交付可能横跨多个分类（`architecture/`、`feature/`、`design/`、`process/` 等）；每份记录都要从它各自所属的分类目录移出，而不是全按 plan 文件的目录处理。
 
    随后按照 `.agents/ADR/AGENTS.md` 编辑每份记录：
 
@@ -53,20 +54,36 @@ description: 在工作验收通过后收尾归档：删除对应的 plan 文件�
    - 将 `## Acceptance criteria` 和 `## Risks` 的内容归并进 `## Consequences`
    - 修正实施过程中发生变化的客观事实——路径、名称、默认值。仅限修正事实；如果核心决策本身变了，停下：那需要起草一份新记录。
 
-8. 修复入站链接（inbound links）。因为相对路径里编码了生命周期目录，所有指向旧路径的链接现在都会失效。对每份被移动的记录执行检索：
+8. 修复入站链接与替代反向链接（inbound & supersession links）。因为相对路径编码了生命周期目录，且同目录下使用裸文件名（`{name}.md`）、同处 `proposed/` 跨分类的文件及 `.plan.md` 的 `Constrained by:` 使用 `../{class}/{name}.md`，仅搜索 `proposed/{class}/{name}` 会漏检。对每份被移动的记录按文件名全仓检索：
 
    ```bash
-   grep -rn "proposed/{class}/{name}" .agents/ADR AGENTS.md docs 2>/dev/null
+   grep -rn --exclude-dir=.git --exclude-dir=node_modules "{name}.md" . 2>/dev/null
    ```
 
-   将每一处命中改写为新的 `implemented/` 路径。绝不要为了修复出站链接而修改 `archived/` 中的历史记录。
+   根据每处引用文件所在目录，计算并改写为指向新路径的正确相对链接（同目录用裸文件名，跨目录按相对层级定位）。代码注释中的 `ADR <date>-<slug>` 不含路径，无需改动。绝不要为了修复出站链接而修改 `archived/` 中的历史记录。
+
+   如果本次升格的记录替代了某份旧的 `implemented/` 记录，检查旧记录中是否已添加指向本新记录的替代说明链接（或将原本指向 `proposed/` 的链接更新为 `implemented/`），确保双向交叉引用完整。
 
 9. 向用户汇报：已删除的 plan 文件、已移动的记录、已重写的章节、已修复的链接，以及任何仍待跟进的事项（如提 PR、写发布说明、补充后续记录等）。保持改动处于未提交状态并告知用户；何时暂存与提交由用户决定。
 
+## 其他生命周期迁移（仅在用户明确指示时）
+
+### 放弃提案（`proposed/` → `rejected/`）
+
+1. 若该提案对应的独立 `.plan.md` 存在，删除它；若属于多记录联合 `.plan.md` 且其他记录仍继续推进，仅从该 `.plan.md` 头部移除此 `ADR:` 行。
+2. 若属于值得保留否决理由的诱人方向（按 `.agents/ADR/AGENTS.md`），先 `mkdir -p .agents/ADR/rejected/{class}` 并 `mv` 到 `rejected/{class}/{name}.md`，将 `Status: proposed` 改为 `Status: rejected — <one line why>`，其余正文保持冻结；否则直接删除提案文件。
+3. 按主流程第 8 步按 `{name}.md` 检索并修复（或清理）入站链接，汇报变更并保持未提交。
+
+### 归档历史记录（`implemented/` → `archived/`）
+
+1. 确认该记录完全已交付、不再指导未来工作且不符合 `.agents/ADR/AGENTS.md` 中需保持活跃的豁免条件。
+2. 先 `mkdir -p .agents/ADR/archived/{class}`，再 `mv` 到 `.agents/ADR/archived/{class}/{name}.md`。
+3. 严格只改元数据：将 `Status: implemented` 改为 `Status: archived`，紧随其后新增一行 `Archived: YYYY-MM-DD`，再空一行。**正文一字不改**（保留 `implemented/` 骨架且永久冻结）。
+4. 按主流程第 8 步检索 `{name}.md` 并修复仍需指向该历史记录的活跃文件入站链接（跳过其他 `archived/` 文件），汇报变更并保持未提交。
+
 ## 退出条件
 
-- 本次交付对应的 `.plan.md` 已不再存在。
-- 计划中列出的每份记录均已位于 `implemented/` 下，且状态为 `Status: implemented`。
-- 这些记录中不再残留任何 `## Proposal`、`## Plan`、`## Acceptance criteria` 或 `## Risks` 标题。
-- 不存在任何仍指向旧 `proposed/` 路径的入站链接。
+- 执行交付升格时：对应 `.plan.md` 已删除，计划中列出的每份记录均已位于 `implemented/` 且状态为 `Status: implemented`，不再残留 `## Proposal`、`## Plan`、`## Acceptance criteria` 或 `## Risks` 标题。
+- 执行放弃提案或归档历史时：对应 `.plan.md` 已清理（如适用），记录已移入 `rejected/` 或 `archived/` 且元数据符合 `.agents/ADR/AGENTS.md`（`archived/` 正文一字未改）。
+- 不存在任何因本次迁移而失效的活跃文件入站链接（`archived/` 除外）。
 - 已明确向用户报告所有变更细节。

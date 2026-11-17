@@ -40,15 +40,17 @@ description: 提炼自《Refactoring UI》的 Web UI 设计规则与工作流。
 
 1. 访谈收集：品牌色、中性色冷暖倾向（冷灰/暖灰）、产品性格、深色模式需求。问题尽量打包一次问完，允许跳过任意一项，也允许使用默认值。
 2. 构建 9 阶色板：基准 500 → 900 / 100 → 700 / 300 → 补齐其余色阶。当亮度偏离 50% 向两端移动时，提高饱和度。
-3. 校验对比度：正文至少 4.5:1、大号文本至少 3:1，必须运行 `scripts/check_contrast.py` 检查，禁止肉眼目测。
-4. 产出四份文件：`tokens.json` / `tokens.css` / `DESIGN.md` / `preview.html`。
-5. 记录一份 `proposed/design/` 下的 ADR。
+3. 校验对比度：正文至少 4.5:1、大号文本至少 3:1，必须运行 `scripts/check_contrast.py` 检查（基于 skill 所在路径解析，而非项目路径），禁止肉眼目测。
+4. 产出四份文件：`tokens.json` / `tokens.css` / `DESIGN.md` / `preview.html`。落盘位置优先遵循项目现有样式/主题目录；若项目尚无约定，与用户确认默认目录（如 `design-system/`、`src/styles/` 或项目根目录）。
+5. 记录一份 `proposed/design/` 下的 ADR（若 `.agents/ADR/` 存在）。
+   - **若从 `mm-plan` 规划期转入且尚未授权实施**：只落盘 `proposed/design/` ADR 与对应的 `.plan.md`（交付上述 4 份文件并跑通 `check_contrast.py`），暂不生成实现文件，待独立实施并通过 `mm-land` 升格后再执行业务计划。
+   - **若直接授权落地设计系统**：生成上述 4 份文件与 `proposed/design/` ADR；待用户确认 `preview.html` 与对比度检查无误后，提醒通过 `mm-land` 将该 ADR 升格为 `implemented/design/`，避免设计系统已上线而 ADR 长期滞留 `proposed/`。
 
 具体做法见 `11-tokens.md`；若项目使用 Tailwind，可参考 `12-tailwind.md` 做映射（仅作可选映射）。
 
 **停机点**：色板方向、Token 命名。这两项日后修改代价极高——定稿前必须先向用户确认。
 
-**完成标准**：`preview.html` 里没有任何你解释不清用途的色阶或刻度；所有对比度组合均校验通过；ADR 记录已落盘。
+**完成标准**：`preview.html` 里没有任何你解释不清用途的色阶或刻度；所有对比度组合均校验通过；`proposed/design/` ADR 已落盘（若尚在未授权的规划期则附带 `.plan.md`；若已直接实施则提醒用户验收后走 `mm-land` 升格）。
 
 ## Build · 新增界面
 
@@ -73,7 +75,7 @@ description: 提炼自《Refactoring UI》的 Web UI 设计规则与工作流。
 
 **停机点**：设计方向（不是抠细节）、缺少基础刻度（转回 System）。
 
-**完成标准**：已产出截图、每处改动都能追溯到具体规则编号、空状态已实现，且已跑过 `15-direction.md` 中的 AI Slop Test。
+**完成标准**：已产出截图（若环境无法渲染，须按下方「视觉证据」一节说明原因与未核验项）、每处改动都能追溯到具体规则编号、空状态已实现，且已跑过 `15-direction.md` 中的 AI Slop Test。
 
 ## Refine · 调整现有界面
 
@@ -97,7 +99,7 @@ description: 提炼自《Refactoring UI》的 Web UI 设计规则与工作流。
 
 **停机点**：缺少必要的 Token（转去 System）、整体方向错了（退回 Build）。
 
-**完成标准**：存在修改前后的对比截图，且每处修改都能追溯到具体的规则编号。
+**完成标准**：存在修改前后的对比截图（若环境无法渲染，须按下方「视觉证据」一节说明原因与未核验项），且每处修改都能追溯到具体的规则编号。
 
 ## Review · 只评审不改代码
 

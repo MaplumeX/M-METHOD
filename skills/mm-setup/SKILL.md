@@ -63,5 +63,5 @@ Agent 会反复争论已经定下来的问题，因为选择背后的推理过�
 ## 退出条件
 
 - `.agents/ADR/AGENTS.md` 已存在且与标准一致，或用户明确选择保留其自定义版本。
-- 根目录 `AGENTS.md` 中恰好包含一个 `decision-records` 区块，且起止标记完整。
-- `AGENTS.md` 的其他部分未被改动。
+- 目标入口文件（根目录 `AGENTS.md`，或缺少 `AGENTS.md` 时用户选定的 `CLAUDE.md` / 两者）中恰好包含一个 `decision-records` 区块，且起止标记完整。
+- 目标入口文件的其他部分未被改动。
