@@ -1,78 +1,72 @@
 ---
 name: mm-ui
-description: 提炼自《Refactoring UI》并融合结构探索、全状态设计、设计系统双向同步与多画布适配的 Web UI 设计工作流。包含六种模式——Explore（多方案结构探索）、System（设计系统）、Sync（代码/设计同步）、Build（构建）、Refine（调优）、Review（评审）——以及贯穿始终的三项工程纪律。适用于探索页面布局方案、构建或修改页面/组件/设计系统、补齐加载/空/错误/边界状态，或界面「看起来不对劲但说不出哪里怪」时（如「界面设计」「给几个方案」「样式调整」「UI 太丑」「设计评审」「全状态」「设计规范」「同步组件库」「explore」「state matrix」「design brief」）。不适用于后端逻辑、纯文案修改或没有视觉呈现的改动。
+description: 提炼自《Refactoring UI》并结合设计系统、全状态体验与视觉巡检的 Web UI 设计与调优工作流。适用于探索页面布局、构建新页面或组件、建立或同步设计系统、补齐加载/空/错误/边界状态、界面「看起来怪但说不出哪里不对」时调优，或只读设计评审（如「界面设计」「给几个方案」「样式调整」「UI 太丑」「设计规范」「设计评审」「全状态」「explore」「design brief」）。不适用于后端逻辑、纯文案修改或没有视觉呈现的改动。
 ---
 
 # UI · 界面设计与调优
 
-负责所有带视觉呈现的界面工作：六种模式，三项纪律，兼顾多方案结构探索、全状态体验完整度与静态/视觉证据门禁。
+负责所有带视觉呈现的界面工作：内置设计硬规范，用最少流程完成方向锁定、全状态交付与客观检查。
 
 **不在范围内**：后端逻辑、纯文案编辑、用户不可见的底层重构。
 
-## 核心前提
-
-1. **脚本只是底线，不是全部交付标准**：`check_ui_rules.py` 与 `check_contrast.py` 仅校验静态规则与契约；对应模式要求的 **Read Gate、结构探索比选、程序生色、全状态矩阵（State Matrix + 拟真数据）、Pass 1 → Pass 2、对照截图（或逐项未核验清单）、`§id` 追溯与 AI Slop Test 5 项裁决** 同样是硬性交付要求。
-2. **先读剧本再动手**：命中模式后，必须先完整读取对应的 `references/mode-*.md` 剧本及必读透镜文件。
-3. **画布与介质解耦**：依据 [`canvas-adapters.md`](references/canvas-adapters.md)，按阶段选择 **独立 HTML 原型**、**设计工具 MCP 画布**（仅当当前会话确实可用时，否则透明回退 HTML / ASCII）或 **生产框架代码**，先验证结构与状态再落业务代码。
-
 ## 规划期只读边界
 
-若当前处于 `mm-plan` 规划阶段，或用户尚未确认方案 / 授权实施，本 skill 全程保持**只读**：
-- **严禁写入任何文件**（`tokens.*`、`DESIGN.md`、`preview.html`、业务 UI 代码、简报注释、`proposed/design/` ADR 或 `.plan.md`）。
-- 需要校验配色时，直接向 `scripts/check_contrast.py` 传入内联 `"fg:bg"` 参数，不写临时文件。
-- 仅向 `mm-plan` 返回结构探索草案、组件索引摘要、设计系统决策草案或 UI 方向/步骤建议，等待用户确认后再按 `mm-plan` 流转规则落盘。
+若当前处于 `mm-plan` 规划阶段，或用户尚未确认方案 / 授权实施，全程保持**只读**：
+- **严禁写入任何文件**（`tokens.*`、`DESIGN.md`、`preview.html`、业务 UI 代码、ADR 或 `.plan.md`）。
+- 需校验配色时，向 `scripts/check_contrast.py` 直接传内联 `"fg:bg"` 参数，不写临时文件；结构对比用 ASCII 骨架呈递。
 
-## Step 0 · 先读项目，再做判断
+## 动手前 · 静默摸底与按需查阅
 
-在提出任何设计结论前，先查清并简短汇报以下 5 项（若存在 `DESIGN.md` 一并读取其受众、语调与组件索引）：
+提出任何设计结论前，静默查清当前项目的 **框架、现有 Token / `DESIGN.md`、组件库（shadcn/ui、MUI、AntD 等）、深色模式支持与真实刻度**，不凭空猜测，也不重造已有组件（项目既有体系永远优先；必要时顺手更新 `DESIGN.md` 组件索引）。
 
-1. **框架（Framework）**：React / Vue / Svelte / 原生 HTML；SSR 还是 SPA。
-2. **现有 Token**：CSS 自定义属性、theme 对象、`tokens.json`、`theme/` 或 Tailwind 配置。
-3. **组件库与既有组件**：shadcn/ui、MUI、Ant Design、Radix 或项目 `components/` 索引及其支持状态。
-4. **深色模式**：已支持、规划中，还是不支持。
-5. **既有字号与间距刻度**：从配置文件提取真实值，绝不凭记忆猜测。
+通用硬规范已内联在下方；**仅当命中对应场景时，先读对应 1 份参考资料**（共 3 份，避免无关加载）：
+- **无设计系统 / 建色板、暗色模式或 Tailwind 映射 / 维护 `DESIGN.md`** → 读 [`references/tokens-and-color.md`](references/tokens-and-color.md)
+- **新产品定调、布局架构未定需要出方案、做 `100dvh` 多栏工作台或 `clamp()` 滚动叙事** → 读 [`references/layout-and-direction.md`](references/layout-and-direction.md)
+- **写复杂标准组件（表单/表格/弹窗/空状态）、补状态细节，或排查“哪里怪”** → 读 [`references/antipatterns-and-recipes.md`](references/antipatterns-and-recipes.md)
 
-**项目既有体系永远优先**：已有设计系统与组件时翻译并索引使用（必要时先走 `Sync` 纳入 `DESIGN.md`），绝不擅自覆盖、重复造轮子、静默迁移或引入新的构建依赖。若既有 Tailwind 项目已普遍采用 `dark:` 类名体系，运行 `check_ui_rules.py` 时加 `--allow-dark-prefix`。
+## 三条工作路径
 
-## 模式路由
+任务混杂时按 `方向/系统 → 构建 → 调优` 推进：
 
-命中第一条即停止；任务混杂时按 `Explore → System / Sync → Build → Refine` 分段推进：
+1. **Build / System（构建界面或初始化设计系统）**
+   - **布局或交互流未定**：先给出 **2–3 个结构/交互/密度真正不同**的方案（ASCII 骨架 + 状态处理 + `max-width` + 1 个主推）由用户拍板，禁止换色不换骨。
+   - **尚无设计系统**：先用 [`scripts/generate_ramp.py`](scripts/generate_ramp.py) 生成 9 阶色板并用 [`scripts/check_contrast.py`](scripts/check_contrast.py) 验算光/暗两套对比度；跨单页的长期决策在确认后按约定记入 `proposed/design/` ADR。
+   - **锁定方向与状态**：动手前先在内部（或 3 句话简短对齐）锁定具体材质/场景调性（拒绝 `clean/modern` 等空话）及状态矩阵（`default` 拟真数据 + `empty` + `loading` + `error` + `edge`）。先用中性灰阶定好结构与层级，再叠语义色、景深与收尾。
+2. **Refine（调优现有界面）**
+   - 按 `层级 → 间距 → 排版 → 色彩 → 景深 → 图片 → 收尾` 顺序排查，**停在第一个能解释问题的维度**（先查 [`references/antipatterns-and-recipes.md`](references/antipatterns-and-recipes.md) 速查表）。
+   - **一次只改一个维度**并确认对比效果，不把间距、字重、阴影搅在同一轮修改中。
+3. **Review（只读评审）**
+   - 有可运行页面/截图时，优先基于真实渲染图（`1440px` + `400px` + 异常态）与 DOM 检查（溢出、断图、报错）做独立审计，不凭编写记忆打分。
+   - 按**严重度**输出「问题 → 根因/改法」与缺失状态，以及未检查项；**源码零修改**。
 
-| 触发条件 | 模式 | 必读剧本与透镜（Read Gate） | 必跑门禁（静态必跑；浏览器可用时加 `shoot.py`） |
-|---|---|---|---|
-| 布局结构/交互流未定，或要求「给几个方案 / 对比方向」 | **Explore** | [`mode-explore.md`](references/mode-explore.md) + `01`、`03`、`15`、`16`、`canvas-adapters.md` | Peer Analysis + 3 个结构/交互/密度差异方案 + 1 个主推（授权写原型时可用 `build_explorer.py` + `shoot.py` 生成并排对比与 `sheet.png`） |
-| 尚无或需替换设计系统 | **System** | [`mode-system.md`](references/mode-system.md) + `11-tokens.md`、`05-color.md`、`15-direction.md` | `generate_ramp.py` + `check_contrast.py` + `check_ui_rules.py --tokens` |
-| 将既有代码 Token/组件同步进 `DESIGN.md`，或按规范改动同步回代码 | **Sync** | [`mode-sync.md`](references/mode-sync.md) + `11-tokens.md`、`13-beyond.md`、`canvas-adapters.md` | 入站跑 `check_ui_rules.py` 盘点缺口；出站先出影响 Diff 再跑全套校验 |
-| 新增页面 / 区块（含**轻量构建**：成熟体系内局部组件可走 `mode-build.md` Lightweight Build） | **Build** | [`mode-build.md`](references/mode-build.md) + `02`、`03`、`04`、`06`、`08`、`09`、`10`、`15`（展示/工作台补读 `16`；轻量构建读 `DESIGN.md` + `09`、`10` + 命中透镜） | `check_ui_rules.py --pass1` → 终检（`--brief`、`--report`、`check_contrast.py`；有浏览器时跑 `shoot.py --strict`） |
-| 修改现有界面 | **Refine** | [`mode-refine-review.md`](references/mode-refine-review.md) + `09-antipatterns.md` + 命中透镜 | `check_ui_rules.py` + `shoot.py` 前后对照（改配色补 `check_contrast.py`） |
-| 只评审不改代码 | **Review** | [`mode-refine-review.md`](references/mode-refine-review.md) + `09-antipatterns.md`、`15-direction.md` | 独立视角审图（`shoot.py`）+ CRAP/认知负荷 + 5 项 AI Slop Test + 全状态覆盖裁决 |
+## 内联设计硬规范（每次必守）
 
-## 贯穿始终的三项纪律
+- **层级与操作**：
+  - 正文用 `400/500`、强调用 `600/700`，**UI 文本不用 `< 400` 字重**；用 3 档中性文字色 + 字重建立层级，不只靠放大字号。
+  - 每屏 **1 个主操作**（实心高对比）、少量次操作（描边/浅底）、其余链接化；危险操作默认降级，到确认弹窗才给强警示。
+  - 优先用格式/上下文或合并写法（`12 left in stock`）替代满屏 `Label: value`；`h1–h6` 按文档语义选，视觉字号按层级定；重色图标降对比度，过细边框宁可加粗到 `2px` 也别刺眼黑。
+- **空间与排版**：
+  - 间距与字号取自固定刻度（如 `4 8 12 16 24 32 48 64...` 与 `12 14 16 18 20 24 30 36...`），不用 `em` 嵌套；**组间间距必须明显大于组内间距**（表单标签与输入框、标题与正文、列表项间距 > 行高）。
+  - **主内容区与长文本必须限宽**：正文 `45–75ch`（约 `20–35em`），不把窄内容拉满 `1440px`（需要全宽的表格/画布除外）；侧边栏定宽、主区自适应。
+  - 行高随字号反比、随行宽正比（大标题 `1.0–1.1`，窄正文 `~1.5`，宽/中文正文 `1.6–1.75`）；混合字号同行 **`baseline` 对齐**；超过 2–3 行不居中；表格数字右对齐。
+- **色彩、景深与反 AI 模板味**：
+  - **禁用纯黑 `#000`**；禁用在有色背景上放灰字或降 `opacity`（改用同色相低对比色）；禁用红绿单独表意（需配图标/文字）。
+  - 正文对比度 `>= 4.5:1`、大字 `>= 3:1`；暗色模式只切语义 Token，且用**更浅的抬升表面 + `1px` 边框**替代深色阴影。
+  - 输入框有明显内凹/边界提示；能用背景差或间距分隔时少加边框。
+  - **禁用典型模板套路**（除非方向明确需要）：紫蓝/黑底青色无源渐变、卡片粗侧边色条、平底页面硬加毛玻璃、千篇一律三连等分阴影卡片、渐变文字、用弹窗装普通长内容；**禁用 `transition: all`** 与动画布局属性（只动 `transform`/`opacity`）。
+- **状态与真实数据**：
+  - 禁用 `Lorem ipsum` / `Test 1`；必须覆盖 `empty`（低对比图形 + 标题 + 说明 + 主 CTA，并隐藏无用筛选/Tab）、`loading`（`>1s` 用匹配真实尺寸的骨架屏防跳动）、`error`（可操作的恢复提示）与长文本/CJK 截断（截断必须有查看全文路径）。
 
-1. **每次只改一个维度（透镜）**：不把间距、字重、阴影混在同一轮改动中，改完一个维度并验证对比效果后再进下一个。
-2. **事实证据先于修改建议**：先摆出客观现状（如实际用了几档间距、行宽 `ch` / 对比度数值、重复元素、缺失状态），再给出调整方案。
-3. **`§id` 是最小讨论单元**：每条评审发现与每处修改都必须附带对应的 `§id` 规则编号（见 [`00-coverage.md`](references/00-coverage.md)）。
+## 验证与收口自检
 
-## 视觉证据与决策归档
-
-- **无渲染不做视觉结论，无对照不做质量判定**：
-  - `Explore` 授权出原型时，可用 `scripts/build_explorer.py` 生成并排 `style-explorer.html`，用 `scripts/shoot.py` 输出 `sheet.png`。
-  - `Build` 确认全状态矩阵（`default` 拟真数据 + `empty` + `loading` + `error` + `edge`），优先运行 `scripts/shoot.py --states ... --strict` 校验真实视口（`1440px` + `400px` + 异常态）无横向溢出、断图与运行时报错，并查看 `sheet.png` / 对照截图。
-  - `Refine` 查看修改前后的桌面与移动对比图；`Review` 对同会话产出遵循**独立视角审计**（仅依据真实截图、DOM 检查与源码，不带创作自辩上下文）。
-  - 若运行环境确实无法渲染截图，**必须在汇报中逐项列出「未核验项清单」**，禁止只用一句「没有浏览器」带过。
-- **ADR 归档边界**：作用域跨越单页的长期决策（色板、刻度、跨组件契约、组件库选型、深色策略）在获确认后记入 `proposed/design/`（遵循 `.agents/ADR/AGENTS.md`）；单页局部布局权衡留在 `.plan.md`。
-
-## 参考资料索引
-
-- **模式剧本与画布**：[`mode-explore.md`](references/mode-explore.md) · [`mode-system.md`](references/mode-system.md) · [`mode-sync.md`](references/mode-sync.md) · [`mode-build.md`](references/mode-build.md) · [`mode-refine-review.md`](references/mode-refine-review.md) · [`canvas-adapters.md`](references/canvas-adapters.md)
-- **规则与配方（151 条规则，总索引 [`00-coverage.md`](references/00-coverage.md)）**：`01-starting` / `02-hierarchy` / `03-spacing` / `04-typography` / `05-color` / `06-depth` / `07-images` / `08-finishing` / `09-antipatterns` / `10-recipes` / `11-tokens` / `12-tailwind` / `13-beyond` / `14-laws` / `15-direction` / `16-layout-patterns`
-- **自动化脚本**：[`check_ui_rules.py`](scripts/check_ui_rules.py) · [`check_contrast.py`](scripts/check_contrast.py) · [`generate_ramp.py`](scripts/generate_ramp.py) · [`shoot.py`](scripts/shoot.py) · [`build_explorer.py`](scripts/build_explorer.py)
+- **客观工具**：
+  - 涉及配色必跑 `python3 skills/mm-ui/scripts/check_contrast.py`（注意传实际项目/相对路径）。
+  - 有本地服务或独立 HTML 时，优先跑 `python3 skills/mm-ui/scripts/shoot.py <url_or_html> --out shots/ --states default,empty,loading,error --strict` 检查 `1440px` / `400px` 视口截图、横向溢出、断图与运行时报错；若无浏览器环境，简短说明未运行渲染检查即可。
+- **内部静默自检（勿打印核对清单）**：交付前在内部过一遍上述硬规范与 AI Slop 雷区（无源渐变、默认字体无依据、居中双按钮 Hero、三连同款卡片、通用顶栏），命中即改。
 
 ## 退出条件
 
-满足当前模式对应的收口状态即结束（不擅自延续为无边界对话，也不自动触发 `git commit` 或 `mm-land`）：
-
-- **规划期只读**：已返回结构探索草案、设计系统决策草案或分步实施建议至 `mm-plan` / 用户确认，工作区零文件写入。
-- **Explore**：已输出 Peer Analysis、3 个结构/交互/密度差异方案与 1 个主推建议（含原型或 ASCII 骨架），并在选择停靠点等待用户拍板。
-- **System / Sync / Build / Refine**：对应模式的静态门禁（`check_ui_rules.py`、`check_contrast.py`）全部退出 `0`，视觉对比截图已核验（或已逐项列出「未核验项清单」），交付汇报已附 `§id` 追溯与 5 项 AI Slop Test 逐条裁决，作用域跨单页的长期决策已按约定记入 `proposed/design/`。
-- **Review**：已按严重度输出 `§id` / CRAP / 状态缺口发现、5 项 AI Slop Test 裁决、全状态与运行时检查结论，以及明确声明的未检查项，源码零修改。
+满足当前任务对应的收口状态即结束（不自动提交代码或触发 `mm-land`）：
+- **规划期只读**：已向 `mm-plan` 或用户返回只读设计/结构建议，工作区零写入。
+- **Build / System / Refine**：功能与各状态实现完整，配色对比度通过 `check_contrast.py`，已运行渲染截图检查（或说明环境限制）；跨单页长期设计决策已按约定记入 `proposed/design/`。
+- **Review**：已按严重度输出问题、根因改法、状态覆盖情况与未检查项，源码零修改。

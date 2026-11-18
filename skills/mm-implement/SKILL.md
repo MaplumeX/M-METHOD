@@ -46,10 +46,9 @@ find "$REPO_ROOT/.agents/ADR/proposed" -name '*.plan.md' 2>/dev/null | sort
 - **长期约束注释**：写下依赖某项长期约束的代码时，在同一次编辑中按 `.agents/ADR/AGENTS.md` 的 `## References from code` 格式同步落注——先写清违反约束的后果，再附 `See ADR <date>-<slug>.`（不得写入公开 API 文档注释）。
 
 ### 涉及 `mm-ui` 的步骤
-当某一步标注了 `mm-ui`（`System` / `Build` / `Refine`）时，先加载 [`skills/mm-ui/SKILL.md`](../mm-ui/SKILL.md) 及对应模式剧本，并严格遵循其全部交付门禁：
-- **首次方向确认**：同一视觉交付只需在首次进入 UI 构建前，按 `mode-build.md` 声明三行方向（`Visual thesis` / `Content plan` / `Interaction thesis`）并等待用户确认；后续 UI 步骤沿用已锁定方向。
-- **逐表面双遍构建**：Build 必须对**每个新增表面/步骤**独立走完 `Pass 1`（灰度骨架 + 空状态结构 + 几何节奏 + `--pass1` 门禁）与 `Pass 2`（色彩 + 景深 + 收尾 + `--brief` / `check_contrast.py`），不得用前一步的 Pass 1 豁免后续侧栏或弹窗；`System` 步骤须程序化生成色板并通过 `--tokens` 与对比度门禁。
-- **视觉证据与追溯报告**：按模式要求产出对照截图（无法渲染时须在汇报中逐项列出「未核验项清单」），并在最终交付汇报中提供「改动 → `§id`」追溯与 5 项 AI Slop Test 逐条裁决（不把 `§id` 塞满业务代码注释）。
+当某一步标注了 `mm-ui` 时，先加载 [`skills/mm-ui/SKILL.md`](../mm-ui/SKILL.md) 并遵守其设计硬规范与对应按需参考：
+- **先定方向与状态**：同一视觉交付在首次进入 UI 构建前简要对齐视觉调性与需要覆盖的状态（`default` 拟真数据、`empty`、`loading`、`error`、`edge`），后续步骤沿用该方向。
+- **核验与收口**：涉及配色须通过 `check_contrast.py`；有可运行页面时优先用 `shoot.py` 检查桌面/移动视口与异常态渲染，确认无横向溢出或运行时报错后再推进下一步。
 
 ## 5. 当现实与计划冲突时
 
