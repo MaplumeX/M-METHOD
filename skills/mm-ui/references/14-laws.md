@@ -45,7 +45,7 @@ Pass these before any UI delivery:
   `.css/.scss/.less/.tsx/.jsx/.html/.vue/.svelte`, fails on 0 scanned files, exit 0) for
   spacing/type scales, heading line-height, `center`-aligned text rows (`§4.4`), flat
   inputs (`§6.1.3`), dark-mode overrides (`13-beyond.md`), and motion bans; use `--tokens`
-  on `tokens.*` (`§5.3`–`§5.5` ramps), `--pass1` per new surface, `--brief` on the 9-key
+  on `tokens.*` (`§5.3`–`§5.5` ramps), `--pass1` per new surface, `--brief` on the 10-key
   brief (requiring `02/03/04/06/08/09/10/15`), and `--report` on the final delivery
   summary.
 - **Colors are generated, not guessed.** Build 9-step ramps programmatically via

@@ -4,7 +4,7 @@
 Checks CSS files and <style> blocks inside HTML/Vue/Svelte files against
 mechanically verifiable Refactoring UI / M-METHOD rules, plus optional gates
 for System token ramps (--tokens), Pass 1 grayscale purity (--pass1),
-Build 3-line direction + 6-item constraint brief (--brief), and final
+Build 3-line direction + 7-item constraint & state brief (--brief), and final
 delivery report (--report).
 
 Usage:
@@ -107,6 +107,8 @@ LAYOUT_ANIM_PROPS = {
 
 ALLOW_RE = re.compile(r"mm-ui-allow\s+(§[\w.]+|15-direction)(?:\s*:\s*(.*))?", re.IGNORECASE)
 STYLE_BLOCK_RE = re.compile(r"<style\b[^>]*>(.*?)</style>", re.IGNORECASE | re.DOTALL)
+PLACEHOLDER_COPY_RE = re.compile(r"\b(?:lorem\s+ipsum|dolor\s+sit\s+amet)\b", re.IGNORECASE)
+HTML_OR_BLOCK_COMMENT_RE = re.compile(r"<!--.*?-->|/\*.*?\*/", re.DOTALL)
 
 INPUT_NON_BOX_SUFFIX_RE = re.compile(
     r"(?:^|[.\s>+~])(?:\.?[\w-]*input-(?:group|row|wrap|wrapper|label|help|hint|error|icon|prefix|suffix|box-label))\b",
@@ -1039,6 +1041,29 @@ def check_utility_classes_in_file(file_path: str, text: str, pass1: bool = False
     return findings
 
 
+def check_placeholder_copy(file_path: str, text: str) -> list[Finding]:
+    """Flag placeholder copy such as 'Lorem ipsum' outside comments (§7.1 / realistic data)."""
+    allows = _collect_line_allows(text)
+    stripped = HTML_OR_BLOCK_COMMENT_RE.sub(lambda m: "\n" * m.group(0).count("\n"), text)
+    findings: list[Finding] = []
+    for lineno, raw_line in enumerate(stripped.splitlines(), 1):
+        line_no_comment = re.sub(r"(?:^|\s)//.*$", "", raw_line)
+        m = PLACEHOLDER_COPY_RE.search(line_no_comment)
+        if m and not _utility_allowed(allows, lineno, "§7.1"):
+            findings.append(
+                Finding(
+                    "ERROR",
+                    "§7.1",
+                    "placeholder-copy",
+                    file_path,
+                    lineno,
+                    "copy",
+                    f"placeholder copy '{m.group(0)}' found; replace with realistic domain data",
+                )
+            )
+    return findings
+
+
 def scan_path(target: Path, pass1: bool = False) -> tuple[list[Finding], dict[str, int]]:
     files: list[Path] = []
     if target.is_file():
@@ -1068,8 +1093,10 @@ def scan_path(target: Path, pass1: bool = False) -> tuple[list[Finding], dict[st
                 rules, allows = parse_css_rules(style_text, start_line=start_line)
                 all_findings.extend(check_rules_in_file(str(path), rules, allows, pass1=pass1))
             all_findings.extend(check_utility_classes_in_file(str(path), text, pass1=pass1))
+            all_findings.extend(check_placeholder_copy(str(path), text))
         elif ext in JSX_EXTENSIONS:
             all_findings.extend(check_utility_classes_in_file(str(path), text, pass1=pass1))
+            all_findings.extend(check_placeholder_copy(str(path), text))
     return all_findings, counts
 
 
@@ -1239,12 +1266,13 @@ BRIEF_REQUIRED_KEYS = (
     ("Density & spacing:", "§3.1.2 / §3.6", "missing 'Density & spacing:' constraint"),
     ("Alignment & depth:", "§4.4 / §6.1.3", "missing 'Alignment & depth:' constraint"),
     ("Hierarchy & empty state:", "§2.1 / §8.4", "missing 'Hierarchy & empty state:' constraint"),
+    ("State matrix:", "mode-build / §8.4", "missing 'State matrix:' state coverage declaration"),
 )
 REQUIRED_BUILD_LENSES = ("02", "03", "04", "06", "08", "09", "10", "15")
 
 
 def check_brief_files(paths: list[Path]) -> list[Finding]:
-    """Verify the 3-line direction + 6-item Constraint Brief schema and Read Gate citations."""
+    """Verify the 3-line direction + 7-item Constraint & State Brief schema and Read Gate citations."""
     combined_parts: list[str] = []
     for p in paths:
         combined_parts.append(p.read_text(encoding="utf-8", errors="replace"))
@@ -1318,6 +1346,26 @@ def check_brief_files(paths: list[Path]) -> list[Finding]:
                     "Alignment & depth must specify both alignment (baseline + any control exceptions) and depth (border/inset/shadow)",
                 )
             )
+
+    state_val = extracted_vals.get("State matrix:", "")
+    if state_val:
+        missing_states = [
+            s
+            for s in ("empty", "loading", "error")
+            if not re.search(rf"\b{s}\b", state_val, re.I)
+        ]
+        if missing_states and not re.search(r"\bN/?A\b", state_val, re.I):
+            findings.append(
+                Finding(
+                    "ERROR",
+                    "mode-build / §8.4",
+                    "incomplete-state-matrix-brief",
+                    ref_file,
+                    1,
+                    "State matrix",
+                    f"State matrix must address {', '.join(missing_states)} (or state explicit N/A reason)",
+                )
+            )
     return findings
 
 
@@ -1380,7 +1428,7 @@ def main() -> int:
     ap.add_argument("--strict", action="store_true", help="treat warnings as failures (exit 1)")
     ap.add_argument("--pass1", action="store_true", help="enforce Pass 1 grayscale purity (no accent/status/shadows)")
     ap.add_argument("--tokens", metavar="FILE", help="validate 9-step color ramps in tokens.css or tokens.json")
-    ap.add_argument("--brief", nargs="+", metavar="FILE", help="validate 3-line direction + 6-item constraint brief")
+    ap.add_argument("--brief", nargs="+", metavar="FILE", help="validate 3-line direction + 7-item constraint & state brief")
     ap.add_argument("--report", metavar="FILE", help="validate delivery report (§id traceability, 5-item AI Slop Test, unverified items)")
     args = ap.parse_args()
 

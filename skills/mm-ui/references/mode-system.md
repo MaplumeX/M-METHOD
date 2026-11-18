@@ -6,9 +6,11 @@
 
 Read before starting:
 
-- [`11-tokens.md`](11-tokens.md) — full token architecture and output contract
+- [`11-tokens.md`](11-tokens.md) — full token architecture and contextualized `DESIGN.md` output contract
 - [`05-color.md`](05-color.md) — HSL reasoning, 9-step shade derivation, saturation/hue rules, contrast
+- [`15-direction.md`](15-direction.md) — aesthetic direction, design signature, and absolute bans
 - [`12-tailwind.md`](12-tailwind.md) — only if the project uses Tailwind
+- [`mode-sync.md`](mode-sync.md) — if the repository already has partial tokens or a UI component library to index before extending
 
 ## Planning-period read-only boundary
 
@@ -21,10 +23,11 @@ If invoked from `mm-plan` (or before user confirmation/authorization):
 ## Workflow
 
 1. **Interview (up to 4 rounds, batch questions; defaults allowed)**:
-   - Brand hue, neutral temperature (cool/warm), semantic states (`success / warning / error / info`);
-   - Product personality & typography (neutral sans / serif / rounded sans; CJK pairing; monospace needs);
-   - Shape & depth philosophy (sharp `0` vs restrained `4–6px` vs playful `8–12px` radius; flat borders vs background steps vs shadows);
-   - Dark mode & UI density (compact tool vs standard vs touch-first).
+   - **Product, audience, voice & brand**: who uses this and in what context (`15-direction.md`), voice & tone (`§1.4.4` with concrete UI copy examples), aesthetic mood/reference traits, brand hue, neutral temperature (cool/warm), semantic states (`success / warning / error / info`);
+   - **Personality & typography**: neutral sans / serif / rounded sans, display/CJK pairing, monospace needs;
+   - **Shape & depth philosophy**: sharp `0` vs restrained `4–6px` vs playful `8–12px` radius; flat borders vs background steps vs shadows;
+   - **Dark mode & UI density**: compact tool vs standard vs touch-first.
+   *(If existing tokens or components are already present in the codebase, run inbound `Sync` per [`mode-sync.md`](mode-sync.md) first so nothing is reinvented.)*
 2. **Generate 9-step color ramps & base scales**:
    - **Never hand-pick hexes to chase contrast.** Derive every 9-step ramp programmatically via `scripts/generate_ramp.py` (`500` base → `900 / 100` edges → `700 / 300` midpoints → `800 / 600 / 400 / 200` fill), raising saturation away from 50% lightness (`§5.3–§5.5`).
    - Define full typography (font stacks, 11-step size scale, primary/secondary weights `>= 400`, companion line heights & prose measure), spacing & control heights (`32 / 36 / 44px`), active radii, 5 elevation shadows, border widths (`1px / 2px`), focus ring, `z-index`, motion, and breakpoints.

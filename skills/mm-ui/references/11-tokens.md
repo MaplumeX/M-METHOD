@@ -14,13 +14,13 @@ used.
 
 | Round | Question | Default |
 |---|---|---|
-| 1 | Brand / logo color? Neutral temperature (cool or warm)? Which semantic states are needed (`success / warning / error / info`)? | Neutral blue (not default indigo), cool greys, all four semantic states |
-| 2 | Product personality and typography? (neutral sans / serif / rounded sans; CJK pairing; monospace needs?) | Neutral sans (`§4.2.1` system stack) + system monospace |
-| 3 | Shape and surface-depth philosophy? (sharp `0` / restrained `4–6px` / playful `8–12px` radius; flat borders vs background steps vs shadows?) | `6px` controls / `8px` containers; background steps + `1px` borders + light shadows |
-| 4 | Dark mode and UI density? (ship dark mode now or later; compact tool vs standard vs touch-first?) | Structure semantic tokens for dark mode now (single theme unless asked); standard density (`32–40px` desktop, `44px` touch) |
+| 1 | **Product, audience & color**: Who uses this and in what context (`15-direction.md`)? Voice & tone (`§1.4.4`: concise/technical/warm/authoritative)? Brand hue, neutral temperature (cool or warm), semantic states (`success / warning / error / info`)? Any reference products (if named, extract radius, surface-depth & accent)? | General productivity tool; concise & direct voice; neutral blue (not default indigo), cool greys, all four semantic states |
+| 2 | **Personality & typography**: Product personality and typography (neutral sans / serif / rounded sans; display pairing; CJK pairing; monospace needs)? | Neutral sans (`§4.2.1` system stack) + system monospace |
+| 3 | **Shape & surface-depth**: Sharp `0` / restrained `4–6px` / playful `8–12px` radius; flat borders vs background steps vs shadows? | `6px` controls / `8px` containers; background steps + `1px` borders + light shadows |
+| 4 | **Dark mode & UI density**: Ship dark mode now or later; compact tool vs standard vs touch-first? | Structure semantic tokens for dark mode now (single theme unless asked); standard density (`32–40px` desktop, `44px` touch) |
 
 **Don't ask what you can look up**: existing CSS variables, `tailwind.config.*`, a `theme/`
-directory, the component library in `package.json`. Read all of it before asking.
+directory, the component library in `package.json`. Read all of it before asking (and run `Sync` inbound per `mode-sync.md` when existing tokens/components already exist).
 
 ## 2 · Color: nine steps from a base
 
@@ -130,7 +130,7 @@ When starting from zero, produce these four — no more:
 |---|---|
 | `tokens.json` | Machine-readable single source: raw ramps, semantic aliases (light + dark if enabled), typography (families, size scale, weights, line heights), spacing & control heights, radius, shadows, border widths, z-index, motion, breakpoints |
 | `tokens.css` | CSS custom properties under `:root` (raw + semantic) and `[data-theme="dark"]` (if enabled): `--color-<group>-<step>`, semantic aliases (`--surface*`, `--text*`, `--border*`, `--accent*`, `--status-*`, `--disabled-*`), `--font-*`, `--text-*`, `--weight-*`, `--leading-*`, `--space-*`, `--control-*`, `--radius-*`, `--shadow-*`, `--border-width-*`, `--z-*`, `--duration-*`, `--ease-*` |
-| `DESIGN.md` | One page for humans: ramps, semantic mapping, typography (with CJK rhythm if applicable), spacing & control heights, **cross-component conventions** (active radii, card elevation rule, input depth treatment, 3-tier button hierarchy, focus/disabled rules), breakpoints, what each step is for, what not to do |
+| `DESIGN.md` | Living design-system contract for humans and agents, structured in 3 sections: (1) **Product & Brand Context** — target audience & usage context, **Voice & Tone** (`§1.4.4` with concrete button/empty-state/error copy do/don't examples), **Aesthetic Thesis & Design Signature** (`15-direction.md`), and explicit **What NOT to do** bans; (2) **Tokens & Cross-Component Conventions** — ramps, semantic mapping, typography (with CJK rhythm if applicable), spacing & control heights, active radii, card elevation rule, input depth treatment, 3-tier button hierarchy, focus/disabled rules, breakpoints; (3) **Component Index & State Matrix** — inventory of existing/core components, source paths, variants, token bindings, and supported states (`default / hover / focus / disabled / loading / error / empty`, maintained via `mode-sync.md`) |
 | `preview.html` | One page rendering every token (swatches, type specimens, spacing bars, shadow cards) **plus 4 canary component specimens** — Button (primary/secondary/tertiary/disabled/focus), Form Input (label/normal/focus/error), Card, and Alert — with a theme toggle if dark mode is structured |
 
 **Don't invent a build step.** If the project already has a theme mechanism (Tailwind

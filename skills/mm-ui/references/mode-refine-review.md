@@ -33,7 +33,7 @@ Sweep in this exact order and **stop at the first lens that explains the complai
   3. **Change one lens at a time** → re-capture screenshots → compare before/after → only then move to the next lens.
   4. Run `scripts/check_ui_rules.py <target>` (and `scripts/check_contrast.py` if colors changed).
   5. Present a reviewable diff with every change traced to its `§id` rule.
-- **Stop points**: missing required tokens (switch to System mode) or broken overall direction (return to Build mode).
+- **Stop points**: missing required tokens (switch to System mode), broken overall direction (return to Explore/Build mode), or systemic token/component drift across multiple screens (switch to [`mode-sync.md`](mode-sync.md)).
 - **Completion criteria**:
   - Before/after screenshots at desktop and mobile widths (or explicit unverified-item list if headless);
   - `scripts/check_ui_rules.py` (and `check_contrast.py` if colors changed) exits `0`;
@@ -43,9 +43,10 @@ Sweep in this exact order and **stop at the first lens that explains the complai
 
 **Enter when**: "take a look", "what's wrong here", pre-launch check, or reviewing a user-supplied screenshot.
 
-- **Workflow**: follow Refine steps 1–2 without modifying any files.
+- **Workflow**: follow Refine steps 1–2 without modifying any files; also check **State Coverage & Realistic Data** (missing `empty` / `loading` / `error` / `edge` states, or `Lorem ipsum` / generic placeholder copy).
 - **Output**:
-  1. Issues ordered by **severity** (not lens order): **Symptom → `§id` rule → concrete fix**.
+  1. Issues ordered by **severity / impact** (not lens order): **Symptom → `§id` rule (or State/Direction gap) → concrete fix**.
   2. **5-item AI Slop Test** verdicts (`Clear` / `Hit`) per `15-direction.md`.
-  3. Explicit statement of what was **not** checked (e.g. mobile width, dark mode, unrendered states).
-- **Completion criteria**: every finding carries a `§id` rule (or `15-direction` ban), all 5 AI Slop Test items have explicit verdicts, and unchecked areas are declared.
+  3. **State coverage verdict**: which states (`default`, `empty`, `loading`, `error`, `edge`) are verified vs missing.
+  4. Explicit statement of what was **not** checked (e.g. mobile width, dark mode, unrendered states).
+- **Completion criteria**: every finding carries a `§id` rule (or `15-direction` ban / state gap), all 5 AI Slop Test items have explicit verdicts, state coverage is reported, and unchecked areas are declared.
