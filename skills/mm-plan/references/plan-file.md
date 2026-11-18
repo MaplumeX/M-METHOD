@@ -62,21 +62,30 @@ plan becomes ready.
 One paragraph of what the work covers, then an explicit out-of-scope list. The
 out-of-scope list is what stops the executor from quietly widening the task.
 
+For longer multi-step plans (6+ steps), you may add a 2–3 line `Guardrails:`
+bullet list at the end of `## Scope` summarizing non-negotiable ADR invariants
+(what must not be broken, never why) so they stay visible late in execution.
+
 ## Steps
 
 Each step names the files it touches and carries **one inline verification** — a
 command an agent can run. A step that says "implement the feature" is not a step.
+Tag UI steps with `[mm-ui: Build]` or `[mm-ui: Refine]`, split multi-file details
+into short indented sub-bullets, and initialize `Verify:` with `— pending`:
 
 ```markdown
-1. Add `src/config/load.ts` — parse TOML, merge defaults ← file ← env.
-   Verify: `pnpm test src/config/load.test.ts`
+1. [mm-ui: Build] Timer UI — `src/hooks/useTimer.ts`, `src/components/{TimerRing,Controls}.tsx`.
+   - SVG stroke-dashoffset ring; single-column stage `max-width: 480px`.
+   Verify: `npm run build && python3 ...shoot.py ... --strict` — pending
 ```
 
-During execution, record each step's outcome inline beside `Verify:` (e.g.
-``Verify: `pnpm test src/config/load.test.ts` — passed, 2026-11-16``) so a later
-session running `mm-land` can verify that every step actually ran. Do not repeat
-these checks in `## Verification`. That section belongs to the human, and
-duplicating an assertion in two places is how the two copies end up disagreeing.
+During execution, replace `— pending` with **one concise summary line** (date +
+measured scope/counts, e.g. ``Verify: `pnpm test src/config/load.test.ts` — passed 2026-11-16: 14 tests (1 file)``)
+so a later session running `mm-land` can verify every step ran without turning
+`## Steps` into a wall of prose. Keep debugging narratives and fixed-bug stories in
+your chat report, not inside `Verify:`. Do not repeat these checks in
+`## Verification`. That section belongs to the human, and duplicating an assertion in
+two places is how the two copies end up disagreeing.
 
 If the work cannot be cut into independently acceptable steps, say so and run it as
 one step instead of inventing phases that only exist on paper. A "step 0:
@@ -122,21 +131,27 @@ An irreversible step deserves to be called irreversible.
 Two kinds of stop points, each bound explicitly to a step number:
 
 - **Hard gate (mandatory pause)**: the executor must stop after the named step and
-  wait for explicit user confirmation before starting the next step (e.g.
-  `After Step 2: confirm Session fields and focusedSec semantics before continuing.`).
+  wait for explicit user confirmation before starting the next step.
 - **Conditional gate (trigger pause)**: the two or three things most likely to go
   wrong, and the exact point at which the executor must stop and ask rather than
-  inventing a workaround (e.g. `After Step 5: if permission prompt fails in real browser, stop and ask whether to move it to Settings.`).
+  inventing a workaround.
 
-Any visual delivery stops at the direction before step one: name the aesthetic, the
-signature and the interaction thesis, and wait. A plan that locks the direction after
-the markup exists has locked nothing.
+Format them as scannable, step-anchored items:
+
+```markdown
+- **Hard gate (After Step 2)**: confirm `Session` fields and `focusedSec` semantics before continuing.
+- **Conditional gate (After Step 5)**: if the notification prompt fails in a real browser, stop and ask whether to move it into Settings rather than adding retries.
+```
 
 ## When the plan changes
 
 Plans are working state: edit them directly when a detail moves. Do not append a
 changelog — git already has one, and a plan that argues with its own history is a
 record wearing the wrong clothes.
+
+On `mm-land`, the plan file is deleted: ephemeral step-level debug notes disappear
+with it, while permanent fact shifts (paths, defaults, dependency versions) and any
+waived `## Verification` gaps fold into the promoted ADR's `## Consequences`.
 
 If the direction itself changes, stop editing. The record is superseded by a new
 `proposed/` record, and this plan is deleted rather than migrated. A plan only ever

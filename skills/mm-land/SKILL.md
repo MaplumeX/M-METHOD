@@ -62,8 +62,8 @@ disable-model-invocation: true
    按 `.agents/ADR/AGENTS.md` 更新每份记录：
    - 将 `Status: proposed` 改为 `Status: implemented`。
    - 将 `## Proposal` 改为 `## Decision`，改用现在时态陈述已交付的现实。
-   - 将 `## Acceptance criteria` 和 `## Risks` 归并入 `## Consequences`。
-   - 仅修正实施中变更的客观事实（路径、符号名、默认值）；若核心决策本身改变，停下并按替代记录流程处理。
+   - 将 `## Acceptance criteria` 和 `## Risks` 归并入 `## Consequences`，并将被用户豁免的 `## Verification` 缺口（`waived by user`）一并记入（单步调试细节随 `.plan.md` 删除，不搬入 ADR）。
+   - 仅修正实施中变更的客观事实（路径、符号名、默认值、实际依赖版本）；若核心决策本身改变，停下并按替代记录流程处理。
 
 8. **修复全仓引用链接与替代反向链接**
 
