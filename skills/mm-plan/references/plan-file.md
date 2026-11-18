@@ -96,14 +96,17 @@ checkbox with its result recorded beside it:
 An unchecked line blocks promotion to `implemented/`. Recording the result, not just
 the tick, is what lets a later session tell "verified" from "someone assumed".
 
-List here only what a person confirms: manual checks, cross-step behaviour, and the
-final command run. Automated per-step checks stay inside `## Steps`.
+List here only what a person confirms: manual checks, cross-step behaviour, and
+at most one final end-to-end command run (e.g., full test suite + build). Per-step
+unit subsets, artifact checks, and single-step screenshots stay inside `## Steps`.
 
 ## Prerequisites
 
-Every API key, token, third-party account, tool, or service the work needs, each
-with a one-line explanation of what it is for. Collect them here, up front. Asking
-for credentials midway through implementation is how a session dies.
+Every API key, token, third-party account, tool, or service the work needs —
+including auxiliary scripts or runtime libraries required by verification steps
+(e.g., Playwright, Pillow) — each with a one-line explanation of what it is for.
+Collect them here, up front. Asking for credentials or missing tools midway
+through implementation is how a session dies.
 
 Record anything you could not verify as a prerequisite, not as verified. Do not
 install tools, launch applications, or mutate state to prove a plan works.
@@ -116,9 +119,14 @@ An irreversible step deserves to be called irreversible.
 
 ## Stop points
 
-The two or three things most likely to go wrong, and what the executor should do
-instead of guessing when they do. Include the point at which they must stop and ask
-rather than continue.
+Two kinds of stop points, each bound explicitly to a step number:
+
+- **Hard gate (mandatory pause)**: the executor must stop after the named step and
+  wait for explicit user confirmation before starting the next step (e.g.
+  `After Step 2: confirm Session fields and focusedSec semantics before continuing.`).
+- **Conditional gate (trigger pause)**: the two or three things most likely to go
+  wrong, and the exact point at which the executor must stop and ask rather than
+  inventing a workaround (e.g. `After Step 5: if permission prompt fails in real browser, stop and ask whether to move it to Settings.`).
 
 Any visual delivery stops at the direction before step one: name the aesthetic, the
 signature and the interaction thesis, and wait. A plan that locks the direction after

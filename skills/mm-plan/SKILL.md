@@ -79,17 +79,20 @@ description: 通过逐轮提问澄清需求，将粗略想法收敛为已批准�
 
 - **Scope & Not in scope**：概括改动范围、依托的现有代码，以及明确不做什么（有意延后的事项须连同原因与负责人一并写入 `Not in scope`，不留模糊缺口）。
 - **Key decisions**：3–5 条本次敲定的核心决策，附推理与实际讨论过并否决的备选方案。
+- **Design system draft**（涉及新界面且尚无设计系统时必填）：随计划一并呈递 3 行视觉定调（Visual / Content / Interaction thesis）、程序推导的色板与内联对比度校验结果、核心组件契约与状态矩阵（`default / empty / loading / error / edge`），不留到确认后才由用户追问补齐。
 - **Steps**：按顺序列出每一步触及的文件/改动，以及一条可执行的 `Verify:` 命令。
-- **Verification**：整体交付验收清单（最终自动检查命令 + 需人工确认的行为）。
-- **Prerequisites**（按需）：所需 API Key、账号、工具或服务及用途；未核实的前置条件归入此处，不写成已验证。
-- **Rollback / Stop points**（按需）：外部状态回退路径（或明确声明不可逆），以及最容易出错、必须停下来询问用户的确认断点。
+- **Verification**：整体交付验收清单（仅含跨步骤的最终总检命令 + 需人工确认的行为；单步测试、构建断言与单步截图留在 `Steps`，不在此重复）。
+- **Prerequisites**（按需）：所需 API Key、账号、工具或服务及用途（含验证脚本依赖如 Playwright、Pillow）；未核实的前置条件归入此处，不写成已验证。
+- **Rollback / Stop points**（按需）：外部状态回退路径（或明确声明不可逆）；`Stop points` 须明确绑定步骤号并区分 **Hard gate**（该步完成必停待确认）与 **Conditional gate**（触发条件才停）。
 
 ### 涉及视觉界面时的专项约束
 
-若计划包含 UI 设计或前端视觉改动，加载 [`skills/mm-ui/SKILL.md`](../mm-ui/SKILL.md) 并遵守其**规划期只读边界**（确认前**禁止写入任何文件**）：
+若计划包含 UI 设计或前端视觉改动，加载 [`skills/mm-ui/SKILL.md`](../mm-ui/SKILL.md) 并遵守其**规划期只读边界**（确认前**禁止写入任何文件**）；**无论项目是否已有设计系统**，都须在计划对应 UI 步骤标明 `mm-ui` 路径（`Build` / `Refine`）与验证方式（`check_contrast.py` / `shoot.py` 或项目既有检查）：
 
-- **尚无设计系统**：按 `mm-ui` 完成只读调研与方案收敛，随本计划一并呈递设计系统决策草案（色板须按程序推导并完成内联对比度校验）。用户确认后，落盘为独立的 `proposed/design/` ADR 与 `proposed/` 下的 `.plan.md`（先独立实施并通过 `mm-land` 升格，或作为独立前置交付），由业务计划在头部通过 `Constrained by:`（或 `Depends on:`）引用该 `design` ADR——绝不把建设计系统塞进业务计划的 Step 1。
-- **已有设计系统**：在对应 UI 步骤标明 `mm-ui` 路径（`Build` / `Refine`）与对应验证方式（对比度 / 渲染截图或项目既有检查）；若步骤涉及「侧边栏 + 自适应主区」双栏布局，计划中须写出主区 `max-width` 上限（或明确全宽理由）。
+- **尚无设计系统**：按 `mm-ui` 完成只读调研与方案收敛，在上面 `Design system draft` 中一并呈递。用户确认后：
+  - **独立/跨应用复用的设计系统**（或用户要求先独立验收视觉底座）：落盘为独立的 `proposed/design/` ADR 与 `proposed/` 下的 `.plan.md`（先独立实施并通过 `mm-land` 升格），由业务计划在头部通过 `Constrained by:`（或 `Depends on:`）引用。
+  - **单应用绿地首版交付**：允许在同一 `.plan.md` 头部列出双 `ADR:`（业务主 ADR + `design/...md`），在 Step 1 建立 `tokens.css` 与设计契约，随首版一并实施与 `mm-land`。
+- **已有设计系统**：若步骤涉及「侧边栏 + 自适应主区」双栏布局，计划中须写出主区 `max-width` 上限（或明确全宽理由）。
 
 ## 7. 确认与流转
 

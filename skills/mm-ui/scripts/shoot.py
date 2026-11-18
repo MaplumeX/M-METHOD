@@ -9,6 +9,7 @@ contact sheet (`sheet.png`) when Pillow is available.
 Usage:
     shoot.py page.html --out shots/
     shoot.py http://localhost:3000 --out shots/ --states default,empty,loading,error
+    shoot.py http://localhost:4173 --serve "npx vite preview --port 4173 --strictPort" --out shots/ --strict
     shoot.py explore/manifest.json --out shots/explore/
     shoot.py page.html --out shots/ --full-page --strict
 """
@@ -17,8 +18,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import signal
+import subprocess
 import sys
+import time
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -174,6 +181,57 @@ def _slug(value: str) -> str:
     return re.sub(r"-+", "-", cleaned).strip("-") or "shot"
 
 
+def _start_server(command: str) -> subprocess.Popen[bytes]:
+    """Start a preview/dev server in its own process group so teardown kills children too."""
+    kwargs: dict[str, Any] = {
+        "shell": True,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.PIPE,
+    }
+    if os.name == "posix":
+        kwargs["start_new_session"] = True
+    return subprocess.Popen(command, **kwargs)
+
+
+def _stop_server(proc: subprocess.Popen[bytes]) -> None:
+    if proc.poll() is not None:
+        return
+    try:
+        if os.name == "posix":
+            os.killpg(proc.pid, signal.SIGTERM)
+        else:
+            proc.terminate()
+        proc.wait(timeout=3.0)
+    except subprocess.TimeoutExpired:
+        try:
+            if os.name == "posix":
+                os.killpg(proc.pid, signal.SIGKILL)
+            else:
+                proc.kill()
+            proc.wait(timeout=2.0)
+        except Exception:
+            pass
+    except ProcessLookupError:
+        pass
+
+
+def _wait_for_server(url: str, proc: subprocess.Popen[bytes], timeout_s: float) -> None:
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        if proc.poll() is not None:
+            err = proc.stderr.read().decode("utf-8", errors="replace").strip() if proc.stderr else ""
+            raise RuntimeError(f"server exited early with code {proc.returncode}" + (f": {err}" if err else ""))
+        try:
+            with opener.open(url, timeout=1.0):
+                return
+        except urllib.error.HTTPError:
+            return
+        except (urllib.error.URLError, OSError):
+            time.sleep(0.2)
+    raise RuntimeError(f"server did not respond at {url} within {timeout_s:.1f}s")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Capture desktop/mobile/state screenshots and runtime layout audits")
     ap.add_argument("target", help="HTML file path, URL, or manifest.json (or directory containing manifest.json)")
@@ -183,7 +241,13 @@ def main() -> int:
     ap.add_argument("--full-page", action="store_true", help="capture full scrollable page height")
     ap.add_argument("--strict", action="store_true", help="exit 1 if overflow, console/page errors, or broken images occur")
     ap.add_argument("--no-sheet", action="store_true", help="skip generating composite sheet.png")
+    ap.add_argument("--serve", help="command to start a local HTTP server for an http(s) target and stop it on exit")
+    ap.add_argument("--serve-timeout", type=float, default=20.0, help="seconds to wait for --serve URL readiness (default: 20)")
     args = ap.parse_args()
+
+    if args.serve and not args.target.startswith(("http://", "https://")):
+        print("error: --serve requires an http:// or https:// target URL", file=sys.stderr)
+        return 2
 
     try:
         from playwright.sync_api import sync_playwright
@@ -215,42 +279,55 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     results: list[ShotResult] = []
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        try:
-            for item in targets:
-                name = item["name"]
-                url = item["url"]
-                for vp_name in vp_names:
-                    vw, vh = VIEWPORTS[vp_name]
-                    for state in states:
-                        console_errs: list[str] = []
-                        page_errs: list[str] = []
-                        context = browser.new_context(viewport={"width": vw, "height": vh})
-                        page = context.new_page()
-                        page.on("console", lambda msg, errs=console_errs: errs.append(msg.text) if msg.type == "error" else None)
-                        page.on("pageerror", lambda err, errs=page_errs: errs.append(str(err)))
-                        page.goto(url, wait_until="networkidle")
-                        page.wait_for_timeout(120)
-                        _activate_state(page, url, state)
-                        overflow_px, broken_imgs = _audit_page(page)
-                        out_file = out_dir / f"{_slug(name)}-{vp_name}-{_slug(state)}.png"
-                        page.screenshot(path=str(out_file), full_page=args.full_page)
-                        context.close()
-                        results.append(
-                            ShotResult(
-                                label=name,
-                                viewport=f"{vp_name} ({vw}px)",
-                                state=state,
-                                path=out_file,
-                                overflow_px=overflow_px,
-                                console_errors=console_errs,
-                                page_errors=page_errs,
-                                broken_images=broken_imgs,
+    server_proc: subprocess.Popen[bytes] | None = None
+    try:
+        if args.serve:
+            server_proc = _start_server(args.serve)
+            try:
+                _wait_for_server(args.target, server_proc, args.serve_timeout)
+            except Exception as exc:
+                print(f"error: failed to start server for '{args.target}': {exc}", file=sys.stderr)
+                return 2
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            try:
+                for item in targets:
+                    name = item["name"]
+                    url = item["url"]
+                    for vp_name in vp_names:
+                        vw, vh = VIEWPORTS[vp_name]
+                        for state in states:
+                            console_errs: list[str] = []
+                            page_errs: list[str] = []
+                            context = browser.new_context(viewport={"width": vw, "height": vh})
+                            page = context.new_page()
+                            page.on("console", lambda msg, errs=console_errs: errs.append(msg.text) if msg.type == "error" else None)
+                            page.on("pageerror", lambda err, errs=page_errs: errs.append(str(err)))
+                            page.goto(url, wait_until="networkidle")
+                            page.wait_for_timeout(120)
+                            _activate_state(page, url, state)
+                            overflow_px, broken_imgs = _audit_page(page)
+                            out_file = out_dir / f"{_slug(name)}-{vp_name}-{_slug(state)}.png"
+                            page.screenshot(path=str(out_file), full_page=args.full_page)
+                            context.close()
+                            results.append(
+                                ShotResult(
+                                    label=name,
+                                    viewport=f"{vp_name} ({vw}px)",
+                                    state=state,
+                                    path=out_file,
+                                    overflow_px=overflow_px,
+                                    console_errors=console_errs,
+                                    page_errors=page_errs,
+                                    broken_images=broken_imgs,
+                                )
                             )
-                        )
-        finally:
-            browser.close()
+            finally:
+                browser.close()
+    finally:
+        if server_proc is not None:
+            _stop_server(server_proc)
 
     sheet_written = False
     sheet_path = out_dir / "sheet.png"

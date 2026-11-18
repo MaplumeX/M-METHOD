@@ -17,7 +17,7 @@ description: 提炼自《Refactoring UI》并结合设计系统、全状态体�
 
 ## 动手前 · 静默摸底与按需查阅
 
-提出任何设计结论前，静默查清当前项目的 **框架、现有 Token / `DESIGN.md`、组件库（shadcn/ui、MUI、AntD 等）、深色模式支持与真实刻度**，不凭空猜测，也不重造已有组件（项目既有体系永远优先；必要时顺手更新 `DESIGN.md` 组件索引）。
+提出任何设计结论前，静默查清当前项目的 **框架、现有 Token / `DESIGN.md` / `.agents/ADR/*/design/*.md`、组件库（shadcn/ui、MUI、AntD 等）、深色模式支持与真实刻度**，不凭空猜测，也不重造已有组件（项目既有体系永远优先；必要时顺手更新 `DESIGN.md` 组件索引）。
 
 通用硬规范已内联在下方；**仅当命中对应场景时，先读对应 1 份参考资料**（共 3 份，避免无关加载）：
 - **无设计系统 / 建色板、暗色模式或 Tailwind 映射 / 维护 `DESIGN.md`** → 读 [`references/tokens-and-color.md`](references/tokens-and-color.md)
@@ -59,9 +59,9 @@ description: 提炼自《Refactoring UI》并结合设计系统、全状态体�
 
 ## 验证与收口自检
 
-- **客观工具**：
-  - 涉及配色必跑 `python3 skills/mm-ui/scripts/check_contrast.py`（注意传实际项目/相对路径）。
-  - 有本地服务或独立 HTML 时，优先跑 `python3 skills/mm-ui/scripts/shoot.py <url_or_html> --out shots/ --states default,empty,loading,error --strict` 检查 `1440px` / `400px` 视口截图、横向溢出、断图与运行时报错；若无浏览器环境，简短说明未运行渲染检查即可。
+- **客观工具**（路径按当前 `mm-ui` skill 所在目录解析，例如 `.agents/skills/mm-ui/scripts/...`）：
+  - 涉及配色必跑 `python3 <mm-ui-dir>/scripts/check_contrast.py`。
+  - 有本地构建产物或服务时，优先用 `--serve` 由 `shoot.py` 自动启停服务（`python3 <mm-ui-dir>/scripts/shoot.py http://localhost:4173 --serve "npx vite preview --port 4173 --strictPort" --out shots/ --states default,empty,loading,error --strict`）或直接传入独立 HTML，检查 `1440px` / `400px` 视口截图、横向溢出、断图与运行时报错；若保留本地 `shots/` 目录，记得加入 `.gitignore`。无浏览器环境时简短说明未运行渲染检查即可。
 - **内部静默自检（勿打印核对清单）**：交付前在内部过一遍上述硬规范与 AI Slop 雷区（无源渐变、默认字体无依据、居中双按钮 Hero、三连同款卡片、通用顶栏），命中即改。
 
 ## 退出条件

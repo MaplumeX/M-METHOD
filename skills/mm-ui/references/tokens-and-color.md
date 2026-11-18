@@ -76,6 +76,7 @@ Dark mode rules (`[data-theme="dark"]` or project selector):
 
 Tailwind's default spacing (`1..32` = `4..128px`) and type (`text-xs..text-7xl` = `12..72px`) match the scales above — avoid arbitrary overrides like `p-[13px]` and never use Tailwind's default `indigo` / `gray` as finished brand colors. If using `50` and `950`, assign explicit semantic roles (`50` = page bg, `950` = darkest text). Map `@theme` / `theme.extend` to semantic CSS vars (`bg-surface`, `text-text`) and use `max-w-prose` (`65ch`) for paragraphs.
 
-When initializing a design system from zero (outside existing Tailwind/theme configs):
-- Produce `tokens.json`, `tokens.css`, `DESIGN.md`, and `preview.html` (all token swatches/scales + 4 canary specimens: Button, Form Input, Card, Alert, plus theme toggle if dark mode is enabled).
-- If `.agents/ADR/` exists, record the system rationale and rejected options in `proposed/design/` per `.agents/ADR/AGENTS.md`.
+When initializing a design system from zero:
+- **Outside Tailwind / standalone design system**: produce `tokens.json`, `tokens.css`, `DESIGN.md`, and `preview.html` (all token swatches/scales + 4 canary specimens: Button, Form Input, Card, Alert, plus theme toggle if dark mode is enabled).
+- **New Tailwind project**: `tokens.css` (mapped via `@theme inline` / `theme.extend`) + a concise `DESIGN.md` component/token index suffice; `tokens.json` and a separate `preview.html` are optional when real app routes already exercise all states.
+- If `.agents/ADR/` exists, record the system rationale, token values, and rejected options in `proposed/design/` per `.agents/ADR/AGENTS.md`.
