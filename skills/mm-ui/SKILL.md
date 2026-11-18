@@ -40,12 +40,12 @@ description: 提炼自《Refactoring UI》并融合结构探索、全状态设�
 
 | 触发条件 | 模式 | 必读剧本与透镜（Read Gate） | 必跑脚本门禁 |
 |---|---|---|---|
-| 布局结构/交互流未定，或要求「给几个方案 / 对比方向」 | **Explore** | [`mode-explore.md`](references/mode-explore.md) + `01`、`03`、`15`、`canvas-adapters.md` | 产出 3 个结构/交互/密度有真实差异的方案 + 1 个主推（规划期零写盘） |
+| 布局结构/交互流未定，或要求「给几个方案 / 对比方向」 | **Explore** | [`mode-explore.md`](references/mode-explore.md) + `01`、`03`、`15`、`16`、`canvas-adapters.md` | Peer Analysis + 3 个结构/交互/密度差异方案 + 1 个主推（授权写原型时可用 `build_explorer.py` + `shoot.py` 生成并排对比与 `sheet.png`） |
 | 尚无或需替换设计系统 | **System** | [`mode-system.md`](references/mode-system.md) + `11-tokens.md`、`05-color.md`、`15-direction.md` | `generate_ramp.py` + `check_contrast.py` + `check_ui_rules.py --tokens` |
 | 将既有代码 Token/组件同步进 `DESIGN.md`，或按规范改动同步回代码 | **Sync** | [`mode-sync.md`](references/mode-sync.md) + `11-tokens.md`、`13-beyond.md`、`canvas-adapters.md` | 入站跑 `check_ui_rules.py` 盘点缺口；出站先出影响 Diff 再跑全套校验 |
-| 新增页面 / 组件 / 区块 | **Build** | [`mode-build.md`](references/mode-build.md) + `02`、`03`、`04`、`06`、`08`、`09`、`10`、`15` | `check_ui_rules.py --pass1` → 终检（`--brief`、`--report`、`check_contrast.py`） |
-| 修改现有界面 | **Refine** | [`mode-refine-review.md`](references/mode-refine-review.md) + `09-antipatterns.md` + 命中透镜 | `check_ui_rules.py`（改配色补 `check_contrast.py`） |
-| 只评审不改代码 | **Review** | [`mode-refine-review.md`](references/mode-refine-review.md) + `09-antipatterns.md`、`15-direction.md` | 可选静态扫描 + 5 项 AI Slop Test + 全状态覆盖裁决（只读不改） |
+| 新增页面 / 组件 / 区块 | **Build** | [`mode-build.md`](references/mode-build.md) + `02`、`03`、`04`、`06`、`08`、`09`、`10`、`15`（展示/工作台补读 `16`） | `check_ui_rules.py --pass1` → 终检（`--brief`、`--report`、`check_contrast.py`、`shoot.py --strict`） |
+| 修改现有界面 | **Refine** | [`mode-refine-review.md`](references/mode-refine-review.md) + `09-antipatterns.md` + 命中透镜 | `check_ui_rules.py` + `shoot.py` 前后对照（改配色补 `check_contrast.py`） |
+| 只评审不改代码 | **Review** | [`mode-refine-review.md`](references/mode-refine-review.md) + `09-antipatterns.md`、`15-direction.md` | 独立视角审图（`shoot.py`）+ CRAP/认知负荷 + 5 项 AI Slop Test + 全状态覆盖裁决 |
 
 ## 贯穿始终的三项纪律
 
@@ -56,12 +56,14 @@ description: 提炼自《Refactoring UI》并融合结构探索、全状态设�
 ## 视觉证据与决策归档
 
 - **无渲染不做视觉结论，无对照不做质量判定**：
-  - `Build` 确认全状态矩阵（`default` 拟真数据 + `empty` + `loading` + `error` + `edge`），查看 `1440px` + `400px` + 空状态/异常状态对照（含 Pass 1 或同级页面 / `preview.html` 对比）。
-  - `Refine` 查看修改前后的桌面与移动对比图。
+  - `Explore` 授权出原型时，可用 `scripts/build_explorer.py` 生成并排 `style-explorer.html`，用 `scripts/shoot.py` 输出 `sheet.png`。
+  - `Build` 确认全状态矩阵（`default` 拟真数据 + `empty` + `loading` + `error` + `edge`），优先运行 `scripts/shoot.py --states ... --strict` 校验真实视口（`1440px` + `400px` + 异常态）无横向溢出、断图与运行时报错，并查看 `sheet.png` / 对照截图。
+  - `Refine` 查看修改前后的桌面与移动对比图；`Review` 对同会话产出遵循**独立视角审计**（仅依据真实截图、DOM 检查与源码，不带创作自辩上下文）。
   - 若运行环境确实无法渲染截图，**必须在汇报中逐项列出「未核验项清单」**，禁止只用一句「没有浏览器」带过。
 - **ADR 归档边界**：作用域跨越单页的长期决策（色板、刻度、跨组件契约、组件库选型、深色策略）在获确认后记入 `proposed/design/`（遵循 `.agents/ADR/AGENTS.md`）；单页局部布局权衡留在 `.plan.md`。
 
 ## 参考资料索引
 
 - **模式剧本与画布**：[`mode-explore.md`](references/mode-explore.md) · [`mode-system.md`](references/mode-system.md) · [`mode-sync.md`](references/mode-sync.md) · [`mode-build.md`](references/mode-build.md) · [`mode-refine-review.md`](references/mode-refine-review.md) · [`canvas-adapters.md`](references/canvas-adapters.md)
-- **规则与配方（151 条规则，总索引 [`00-coverage.md`](references/00-coverage.md)）**：`01-starting` / `02-hierarchy` / `03-spacing` / `04-typography` / `05-color` / `06-depth` / `07-images` / `08-finishing` / `09-antipatterns` / `10-recipes` / `11-tokens` / `12-tailwind` / `13-beyond` / `14-laws` / `15-direction`
+- **规则与配方（151 条规则，总索引 [`00-coverage.md`](references/00-coverage.md)）**：`01-starting` / `02-hierarchy` / `03-spacing` / `04-typography` / `05-color` / `06-depth` / `07-images` / `08-finishing` / `09-antipatterns` / `10-recipes` / `11-tokens` / `12-tailwind` / `13-beyond` / `14-laws` / `15-direction` / `16-layout-patterns`
+- **自动化脚本**：[`check_ui_rules.py`](scripts/check_ui_rules.py) · [`check_contrast.py`](scripts/check_contrast.py) · [`generate_ramp.py`](scripts/generate_ramp.py) · [`shoot.py`](scripts/shoot.py) · [`build_explorer.py`](scripts/build_explorer.py)

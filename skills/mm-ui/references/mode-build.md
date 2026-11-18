@@ -15,8 +15,8 @@ Read **all 8** of these files before drafting your Constraint Brief (do not defe
 - [`08-finishing.md`](08-finishing.md) — `§8.4` empty-state design (mark/illustration + title + copy + CTA + hide inert UI) and `§8.5` fewer borders
 - [`09-antipatterns.md`](09-antipatterns.md) — symptom → `§id` → fix negative-audit checklist
 - [`10-recipes.md`](10-recipes.md) — canonical component recipes (button, form group, card, empty state, table, dropdown, modal, alert)
-- [`15-direction.md`](15-direction.md) — direction lock, absolute bans, and the 5-item AI Slop Test
-- Also read [`07-images.md`](07-images.md) when working with photos, avatars, or non-trivial graphics, [`canvas-adapters.md`](canvas-adapters.md) when choosing Prototype-first / Design Tool MCP / Production Code, and project `DESIGN.md` (if present) to reuse indexed components (`mode-sync.md`).
+- [`15-direction.md`](15-direction.md) — peer analysis, material/scene direction lock, absolute bans, and the 5-item AI Slop Test
+- Also read [`07-images.md`](07-images.md) when working with photos, avatars, or non-trivial graphics, [`16-layout-patterns.md`](16-layout-patterns.md) when building fluid `clamp()` landing/scroll-narrative surfaces or `100dvh` multi-pane workbenches, [`canvas-adapters.md`](canvas-adapters.md) when choosing Prototype-first / Design Tool MCP / Production Code, and project `DESIGN.md` (if present) to reuse indexed components (`mode-sync.md`).
 - If layout structure or interaction architecture is still open, run [`mode-explore.md`](mode-explore.md) first to compare 3 structural options before locking Build.
 
 ## Planning-period boundary
@@ -83,7 +83,7 @@ State matrix: <default (realistic domain data), empty, loading, error, edge (or 
 1. **Read Gate & Brief**: all 8 required files read and the 10-key brief comment is complete.
 2. **Automated Gates**: `scripts/check_ui_rules.py <target> --brief <brief-file>` (plus `scripts/check_contrast.py` if colors were added/changed) exits `0`.
 3. **Comparison Screenshots, States & Negative Audit**:
-   - Capture **`1440px` wide + `400px` narrow + `empty` + `loading`/`error` state** screenshots (plus Pass 1 grayscale or sibling/`preview.html` comparison).
+   - Capture **`1440px` wide + `400px` narrow + `empty` + `loading`/`error` state** screenshots (use `scripts/shoot.py <target> --out shots/ --states default,empty,loading,error --strict` when a runnable HTML/URL is available, inspecting the generated `sheet.png` and verifying zero horizontal overflow, console/page errors, or broken images).
    - Audit against [`09-antipatterns.md`](09-antipatterns.md) by falsification (`§3.3` full-width sprawl? `§4.3` >75ch lines? `§3.6` ambiguous gaps? `§4.4` centered mixed rows? `§6.1.3` flat sticker inputs? `§8.4` bare corner empty state? realistic domain data instead of `Lorem ipsum`?).
    - If rendering is impossible in the environment, declare so and list every **unverified visual item / state** explicitly.
 4. **Rule Traceability**: delivery report maps each component/change to concrete `§id` rules (keep `§id` logs in the report, not cluttering business code).

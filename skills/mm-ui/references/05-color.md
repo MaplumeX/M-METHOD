@@ -138,3 +138,13 @@ card is invisible to them.
   design already carries; it never carries one alone.
 - For multi-series charts, differentiate by **contrast** rather than unrelated hues.
   Judging light from dark is far easier than judging two hues.
+
+## Color weight & surface proportions (extension)
+
+Defining compliant 9-step ramps does not automatically balance how much area each color occupies on screen. Plan **color weight** deliberately before applying Pass 2 accents:
+
+- **70 / 25 / 5 surface budget** (or 60 / 30 / 10 on expressive marketing surfaces):
+  - **~70% quiet neutral canvas** (`--surface`, off-white or deep near-black neutral);
+  - **~25% secondary structural surfaces & typography** (`--surface-raised`, `--surface-sunken`, `--border`, `--text*`);
+  - **~5% high-intent accent** (`--accent`, `--status-*`) reserved strictly for the primary action, active navigation indicator, and true status signals.
+- **Restrained atmospheric treatment**: if using subtle surface warmth or gradients (`§8.3.1`, hues `≤ 30°` apart), confine them to the canvas backdrop or hero band — never saturate every card or container simultaneously.

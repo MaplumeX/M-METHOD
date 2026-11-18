@@ -8,7 +8,8 @@
 
 - [`01-starting.md`](01-starting.md) — `§1.1` feature-first, `§1.2` low-fidelity exploration & disposable sketches (`§1.2.2`), `§1.3.2` smallest shippable version
 - [`03-spacing.md`](03-spacing.md) — `§3.3` canvas bounds, `§3.4` sidebar vs fluid main, `§3.6` spatial grouping
-- [`15-direction.md`](15-direction.md) — direction lock, aesthetic positioning, and absolute bans
+- [`15-direction.md`](15-direction.md) — **peer analysis**, material/scene direction lock, aesthetic positioning, and absolute bans
+- [`16-layout-patterns.md`](16-layout-patterns.md) — fluid `clamp()` rhythm, workbench independent panel scroll, sticky narrative layouts (when applicable)
 - [`canvas-adapters.md`](canvas-adapters.md) — choosing ASCII wireframe vs disposable HTML prototype vs design-tool MCP canvas
 - Project `DESIGN.md` (if present) — honor existing audience, voice, tokens, and Component Index
 
@@ -16,10 +17,18 @@
 
 If invoked inside `mm-plan` (or before implementation authorization):
 
-- **Write zero files**: present all three structural directions inline in the conversation using ASCII layout skeletons and concise specs.
+- **Write zero files**: present the brief peer analysis and all three structural directions inline in the conversation using ASCII layout skeletons and concise specs.
 - Wait for the user to pick or synthesize a direction before proceeding to `.plan.md` / `Build`.
 
-## Divergence rules (no cosmetic clones)
+## Step 1 · Peer analysis (when designing a new product or major surface)
+
+Before sketching layouts, run a fast 2–3 peer benchmark (`15-direction.md`):
+
+- Name **2–3 distinct category peers** (not 3 copies of one template);
+- Extract what works structurally in each (navigation shell, density, color weight, depth treatment);
+- State explicitly **what category convention to keep** and **what default convention to deliberately break**.
+
+## Step 2 · Divergence rules (no cosmetic clones)
 
 Generate **3 structurally distinct directions** (2 if the surface is genuinely narrow and a 3rd would be contrived — state why).
 
@@ -36,7 +45,7 @@ Every direction **must differ across at least two** of these structural axes:
 Keep each option crisp, comparable, and grayscale/low-fidelity (`§1.2.1`):
 
 1. **Name & 1-sentence structural thesis**: what makes this architecture distinct.
-2. **Layout skeleton**: ASCII wireframe (or a disposable standalone HTML prototype / design-tool frame per `canvas-adapters.md`, when workspace writes are authorized).
+2. **Layout skeleton**: ASCII wireframe (or, when workspace writes are authorized, disposable HTML prototypes compiled side-by-side via `scripts/build_explorer.py <manifest.json|files...> --out style-explorer.html` and captured via `scripts/shoot.py <manifest.json> --out shots/explore/` into `sheet.png`).
 3. **Primary flow & state handling**: how the user completes the core task, plus how `empty` and `overflow / long-content` behave in this layout.
 4. **Density, width & key trade-offs**: explicit content `max-width` (`§3.3`), what this option optimizes for, and what it sacrifices.
 

@@ -6,21 +6,33 @@ shapes that make an interface look machine-made.
 
 No coverage obligation (see `00-coverage.md`).
 
+## Peer analysis (before locking direction)
+
+Before choosing an aesthetic direction on a new product or major surface, run a quick **2–3 peer benchmark** (`§1.4.5`):
+
+1. **Identify 2–3 distinct peers** in or adjacent to the product's category (avoid picking 3 clones of the same template).
+2. **Diagnose why they work**: for each peer, extract its concrete structural traits — radius philosophy, surface-depth treatment (shadow vs background step vs border), color weight distribution, and typography pairing.
+3. **Decide what to keep vs break**: explicitly name **which category conventions to adopt** (so users retain muscle memory) and **which default convention to break** (so the interface has its own point of view rather than looking like a generic clone).
+
 ## Lock the direction first
 
 Resolve these five before writing any code.
 
 1. **Who uses this, and in what context?** An analyst dashboard, a landing page and an
    onboarding flow are different products with the same components.
-2. **What is the aesthetic direction?** Name it precisely: dense editorial, raw terminal,
-   ink-on-paper, brutalist grid, warm analog. **"Clean and modern" is not a direction.**
+2. **What is the aesthetic direction (material, scene & character)?** Never stop at vague
+   adjectives like **"clean", "modern", "minimal", or "premium"**. Translate the direction
+   into a concrete **material** (rough newsprint, anodized aluminum, matte slate, warm
+   vellum), **scene** (late-night cockpit, editorial broadsheet, physical ledger), or
+   **character** (terse CLI engineer, calm archivist): e.g. dense editorial, raw terminal,
+   ink-on-paper, brutalist grid, warm analog.
    If the user names a reference product ("feels like Linear"), do not accept it as a
    direction — extract three concrete properties instead: the radius philosophy, the
    surface-depth treatment (shadow vs background step vs border), and the accent color
-   family. Then name those.
-3. **What is the design signature?** A typeface, a color system, an unexpected motion, an
-   asymmetric layout. Pick one and make it obvious; a design with no signature is the
-   default.
+   weight/family. Then name those.
+3. **What is the design signature?** A typeface pairing, a color weight budget (`05-color.md`),
+   an unexpected motion, an asymmetric layout. Pick one and make it obvious; a design with
+   no signature is the default.
 4. **What are the hard constraints?** Framework, bundle budget, contrast minimums,
    keyboard reachability.
 5. **What is the signature micro-interaction?** Scale on press, staggered reveal,
