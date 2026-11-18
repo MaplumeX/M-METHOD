@@ -20,7 +20,7 @@ description: 在工作验收通过后收尾归档：删除对应的 .plan.md 文
    find .agents/ADR/proposed -name '*.plan.md' 2>/dev/null | sort
    ```
 
-   - 存在多个且用户未指定 → 询问用户，不要按时间戳猜测。
+   - 存在多个且用户未指定 → 询问用户（可优先列出所有步骤 `Verify:` 均已记录完成的计划供确认），不要按时间戳猜测。
    - 不存在任何 `.plan.md` → 仍可对单份 ADR 归档，但必须明确说明缺少计划文件，并以用户指定的记录作为本次处理对象。
 
 2. **收集待交付 ADR**
@@ -43,7 +43,7 @@ description: 在工作验收通过后收尾归档：删除对应的 .plan.md 文
 6. **删除计划文件**
 
    ```bash
-   rm .agents/ADR/proposed/{class}/{delivery}.plan.md
+   rm .agents/ADR/proposed/{delivery}.plan.md
    ```
 
 7. **逐一升格 ADR**
@@ -64,7 +64,7 @@ description: 在工作验收通过后收尾归档：删除对应的 .plan.md 文
 
 8. **修复全仓引用链接与替代反向链接**
 
-   由于相对路径编码了生命周期目录（同目录用裸文件名 `{name}.md`，跨目录或 `.plan.md` 中的 `Constrained by:` 用 `../{class}/{name}.md`），仅搜 `proposed/{class}/{name}` 会漏改。按文件名全仓检索：
+   由于相对路径编码了生命周期目录（同目录用裸文件名 `{name}.md`，跨目录按相对层级计算；位于 `proposed/` 根目录的 `.plan.md` 引用 `proposed/{class}/{name}.md` 时写作 `{class}/{name}.md`，记录移入 `implemented/` 或 `rejected/` 后应更新为 `../implemented/{class}/{name}.md` 或 `../rejected/{class}/{name}.md`），仅搜 `proposed/{class}/{name}` 会漏改。按文件名全仓检索：
 
    ```bash
    grep -rn --exclude-dir=.git --exclude-dir=node_modules "{name}.md" . 2>/dev/null
@@ -77,7 +77,7 @@ description: 在工作验收通过后收尾归档：删除对应的 .plan.md 文
 
 9. **汇报收尾**
 
-   向用户报告：已删除的 `.plan.md`、已升格的 ADR、调整的章节、修复的链接，以及后续待办（如提 PR、发版说明等）。保持工作区改动处于未提交状态，由用户决定何时暂存与提交。
+   向用户报告：已删除的 `.plan.md`、已升格的 ADR、调整的章节、修复的链接，以及后续待办（如提 PR、发版说明等）。若第 8 步更新了仍在 `proposed/` 中的其他 `.plan.md` 的 `Depends on:` / `Constrained by:` 链接，一并说明哪些后续 Plan 由此变为 **Ready**（或因前置移入 `rejected/` 而失效需修订）。保持工作区改动处于未提交状态，由用户决定何时暂存与提交。
 
 ## 其他生命周期迁移（仅在用户明确指示时）
 

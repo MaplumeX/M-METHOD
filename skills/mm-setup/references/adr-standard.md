@@ -122,17 +122,24 @@ itself. The records carry the decisions, the alternatives, and the consequences;
 plan carries steps, verification, and prerequisites. A plan that restates the
 rationale has created a second copy that will drift, so it links the records instead.
 
-- One plan per delivery, named `yyyy-mm-dd-<delivery-slug>.plan.md` in the folder of
-  its first `ADR:` record. With a single record the slug is the record name, so the
-  two files match.
-- Header is `# Plan: <title>`, then one `ADR:` line per decision this delivery lands.
-  The first is the primary record. `Constrained by:` follows for records that bind
-  the work without shipping in it.
-- Every listed record ships with this plan. A record that half-shipped stays in
+- One plan per delivery, named `yyyy-mm-dd-<delivery-slug>.plan.md` at the root of
+  `proposed/` (sibling to the `{class}/` folders). With a single record the slug is
+  the record name, so the two filenames match.
+- Header is `# Plan: <title>`, then one `ADR:` line per decision this delivery lands
+  using relative paths into `{class}/` (e.g. `feature/2026-11-18-auth.md`). The first
+  is the primary record.
+- `Depends on:` (optional) lists prerequisite ADR(s) whose delivery must complete
+  before this plan runs; `Constrained by:` (optional) lists records that bind the
+  work without shipping in it. Always link the ADR (`.md`), never its `.plan.md`
+  (plans are deleted on landing, while ADR links are updated automatically). While a
+  `Depends on:` or `Constrained by:` target remains in `proposed/`, it blocks
+  execution of the dependent plan.
+- Every listed `ADR:` record ships with this plan. A record that half-shipped stays in
   `proposed/` — `implemented/` means delivered, not attempted — and is removed from
   the header before landing.
-- Plans exist only in `proposed/`. Finding a plan beside an `implemented/` record
-  means the work was recorded as shipped before its acceptance check ran.
+- Plans exist only in `proposed/`. Finding a plan outside `proposed/`, or lingering
+  after its `ADR:` records moved to `implemented/`, means the work was recorded as
+  shipped before its acceptance check ran.
 - Plans are edited freely — they are working state, not history.
 - Delete the plan in the same change that promotes its records to `implemented/`.
   Git holds the history; a retained plan becomes a second source of rationale.

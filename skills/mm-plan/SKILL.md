@@ -22,7 +22,7 @@ description: 通过逐轮提问澄清需求，将粗略想法收敛为已批准�
 提出任何建议前，先完成以下只读核查：
 
 - **项目规范**：读取根目录 `AGENTS.md`，以及仅与当前问题匹配的领域规则（避免全量加载无关规则树，稀释约束力）。
-- **既有决策**（若 `.agents/ADR/` 存在；尚未运行 `mm-setup` 时跳过此项）：读取 `.agents/ADR/AGENTS.md`、覆盖当前区域的 `implemented/` 记录、存在重叠的 `proposed/` 记录（明确本计划是其延续还是替代），以及同主题的 `rejected/` 记录（避免重演已否决方案）。
+- **既有决策**（若 `.agents/ADR/` 存在；尚未运行 `mm-setup` 时跳过此项）：读取 `.agents/ADR/AGENTS.md`、覆盖当前区域的 `implemented/` 记录、存在重叠或前置依赖的 `proposed/` 记录（明确本计划是其延续、替代，还是须等待其先交付），以及同主题的 `rejected/` 记录（避免重演已否决方案）。
 - **现场配置**：涉及默认配置、端口、环境变量或启动参数时，必须读取真实配置文件并引用现场真实值，严禁凭记忆作答。
 
 **冲突处理**：若成形中的方案与已有规则或 ADR 冲突，必须当场点明冲突条款与建议路径，绝不静默绕过，也不直接卡死。若计划替代某份旧 ADR，须产出一份新记录指向旧记录，并在后续 `mm-land` 升格时补全旧记录指向新记录的反向链接；严禁原地篡改旧决策语义。
@@ -88,7 +88,7 @@ description: 通过逐轮提问澄清需求，将粗略想法收敛为已批准�
 
 若计划包含 UI 设计或前端视觉改动，加载 [`skills/mm-ui/SKILL.md`](../mm-ui/SKILL.md) 并遵守其**规划期只读边界**（确认前**禁止写入任何文件**）：
 
-- **尚无设计系统**：按 `mm-ui` 完成只读调研与方案收敛，随本计划一并呈递设计系统决策草案（色板须按程序推导并完成内联对比度校验）。用户确认后，落盘为独立的 `proposed/design/` ADR 与 `.plan.md`（先独立实施并通过 `mm-land` 升格，或作为独立前置交付），由业务计划通过 `Constrained by:` 引用——绝不把建设计系统塞进业务计划的 Step 1。
+- **尚无设计系统**：按 `mm-ui` 完成只读调研与方案收敛，随本计划一并呈递设计系统决策草案（色板须按程序推导并完成内联对比度校验）。用户确认后，落盘为独立的 `proposed/design/` ADR 与 `proposed/` 下的 `.plan.md`（先独立实施并通过 `mm-land` 升格，或作为独立前置交付），由业务计划在头部通过 `Constrained by:`（或 `Depends on:`）引用该 `design` ADR——绝不把建设计系统塞进业务计划的 Step 1。
 - **已有设计系统**：在对应 UI 步骤标明 `mm-ui` 路径（`Build` / `Refine`）与对应验证方式（对比度 / 渲染截图或项目既有检查）；若步骤涉及「侧边栏 + 自适应主区」双栏布局，计划中须写出主区 `max-width` 上限（或明确全宽理由）。
 
 ## 7. 确认与流转
@@ -97,9 +97,9 @@ description: 通过逐轮提问澄清需求，将粗略想法收敛为已批准�
 
 1. **仅确认方案（「可以」「行」「looks good」）**
    - **可轻易逆转的小改动**（不涉及长期架构/设计决策）：无需建 ADR，也不得创建无 `ADR:` 头的孤立 `.plan.md`。对话计划即为最终定稿，等待下一步指令。
-   - **涉及长期决策且已启用 `.agents/ADR/`**：确保目标分类目录存在（`mkdir -p .agents/ADR/proposed/{class}`），写入以下两份文件，向用户汇报路径与 `## Verification` 清单后**结束规划**（绝不提前写入 `implemented/`）：
+   - **涉及长期决策且已启用 `.agents/ADR/`**：确保各目标 ADR 分类目录存在（`mkdir -p .agents/ADR/proposed/{class}`），写入以下两类文件，向用户汇报路径、多 Plan 间的执行先后顺序（如适用）与 `## Verification` 清单后**结束规划**（绝不提前写入 `implemented/`）：
      - `.agents/ADR/proposed/{class}/yyyy-mm-dd-<slug>.md` — 每个决策一份，遵循 `.agents/ADR/AGENTS.md`（`design` 类涵盖色板、字号间距、圆角阴影与组件契约；单页局部布局留在 plan 文件）。
-     - `.agents/ADR/proposed/{class}/yyyy-mm-dd-<delivery-slug>.plan.md` — 执行附件，遵循 [`references/plan-file.md`](references/plan-file.md)；只写执行步骤与验收，不重复抄写决策理由。
+     - `.agents/ADR/proposed/yyyy-mm-dd-<delivery-slug>.plan.md` — 执行附件，放在 `proposed/` 根目录，遵循 [`references/plan-file.md`](references/plan-file.md)；只写执行步骤与验收，不重复抄写决策理由。若一次产出多个 Plan 或依赖尚未交付的 `proposed/` 决策，在后置计划头部通过 `Depends on:` / `Constrained by:` 指向前置主 ADR（`.md`，绝不指向 `.plan.md`），并确保依赖无环。
    - **涉及长期决策但尚未初始化 `.agents/ADR/`**：询问是否先运行 `mm-setup`；若用户选择不启用 ADR，以对话计划为准，不创建半套目录或孤立 `.plan.md`。
    - **交接退出（Handoff）**：若用户需要交接或当前环境受阻无法继续，按上述规则直接落盘（无 ADR 库时确认对话计划），不空谈受阻原因。
 

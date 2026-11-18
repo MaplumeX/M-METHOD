@@ -9,18 +9,28 @@ description: 按已批准的 .plan.md 或对话计划逐步骤执行开发，每
 
 ## 1. 入口检查
 
-定位仓库根目录（非 git 仓库时回退到当前目录），查找待执行计划：
+定位仓库根目录（非 git 仓库时回退到当前目录），查找待执行计划（标准位置为 `.agents/ADR/proposed/*.plan.md`，同时兼容子目录遗留计划）：
 
 ```bash
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 find "$REPO_ROOT/.agents/ADR/proposed" -name '*.plan.md' 2>/dev/null | sort
 ```
 
-- **存在多个 `.plan.md` 且用户未指定**：询问用户执行哪一份，不要猜测。
 - **不存在 `.plan.md`**：检查当前对话是否已有经 `mm-plan` 确认、且按其规则无需落盘的对话计划；若有，直接按其步骤与验证规则执行。若两者皆无，则不属于本 skill 职责——微小修改直接改即可，较大需求应停下并建议先走 `mm-plan`；若用户坚持无计划直接开发，须明确声明处于「无计划开发」状态并在最终报告中记录该偏离。
-- **存在 `.plan.md`**：通读计划全篇、`.agents/ADR/AGENTS.md`（若存在，重点核对 `## References from code` 格式），以及计划头部 `ADR:` 和 `Constrained by:` 指向的所有记录。执行阶段 ADR 为只读约束，用于界定边界，不授权推翻决策。
+- **存在 `.plan.md`（单份或多份）**：先只读扫描所有 `.plan.md` 的头部（`ADR:`、`Depends on:`、`Constrained by:`）以及各自 `## Steps` 中的 `Verify:` 实测记录，将每份计划归类：
+  - **Ready（可执行）**：无 `Depends on:` / `Constrained by:`，或它们指向的 ADR 均已位于 `implemented/`（且自身仍有未完成或未验证步骤）。
+  - **Awaiting land（步骤已完待归档）**：自身 `## Steps` 均已记录实测 `Verify:` 结果，但关联 ADR 仍在 `proposed/`，等待用户通过 `mm-land` 验收。
+  - **Blocked（被前置阻塞）**：至少有一条 `Depends on:` / `Constrained by:` 仍指向 `proposed/` 中的 ADR（标出具体阻塞源及该前置计划当前状态）。
+  - **Invalidated（前置失效）**：至少有一条依赖指向 `rejected/` 中的 ADR（须退回 `mm-plan` 修订或废弃）。
 
-**前置完整性红线**：执行开始时，`ADR:` 与 `Constrained by:` 指向的记录必须已全部存在。若计划里仍有「去创建某份 ADR」的步骤，说明规划阶段漏掉了前置决策（例如缺失的设计系统应先在规划期确立），立即停下并建议通过 `mm-plan` 补齐。
+- **多 Plan 队列裁决**（当存在多个 `.plan.md` 时）：
+  - **用户未指定目标**：向用户展示解析出的依赖拓扑与状态队列。若仅有 1 份 **Ready**（其余为 `Blocked` 或 `Awaiting land`），直接推荐并确认执行该 **Ready** 计划；若存在多个相互独立的 **Ready** 计划，只列出这些 **Ready** 项请用户选择；若全部处于 `Awaiting land`，提示先通过 `mm-land` 验收归档。
+  - **用户指定了处于 `Blocked` 的计划**：
+    - 若其全部阻塞前置均已对应 **Awaiting land** 计划（步骤全绿但尚未 `mm-land`）：提示「前置计划代码已完成但尚未验收归档」，建议先运行 `mm-land`，或请用户明确授权跳过验收、直接基于当前实现继续；
+    - 若任一前置尚未完成步骤（甚至未开工）：拦截并说明缺失的前置交付，绝不静默越序开工。
+  - **选定目标后**：通读目标计划全篇、`.agents/ADR/AGENTS.md`（若存在，重点核对 `## References from code` 格式），以及计划头部 `ADR:`、`Depends on:` 和 `Constrained by:` 指向的所有记录。执行阶段 ADR 为只读约束，用于界定边界，不授权推翻决策。
+
+**前置完整性红线**：执行开始时，`ADR:`、`Depends on:` 与 `Constrained by:` 指向的记录必须已全部存在。若计划里仍有「去创建某份 ADR」的步骤，或存在未放行的 `proposed/` / `rejected/` 前置依赖，说明规划阶段漏掉了前置决策或前置尚未交付，立即停下并建议先完成前置交付或通过 `mm-plan` 补齐修订。
 
 ## 2. 进度查询与断点续做
 
