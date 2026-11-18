@@ -149,4 +149,4 @@ Change values in `tokens.css`; don't stack `dark:` on every component:
 [data-theme="dark"] { --color-surface: var(--color-neutral-900); --color-text: var(--color-neutral-100); }
 ```
 
-Components use `bg-surface` / `text-text` style semantic classes. See `13-beyond.md`.
+Components use `bg-surface` / `text-text` style semantic classes. See `13-beyond.md`. If adopting an existing codebase that already relies on Tailwind `dark:` utilities (`Step 0`), pass `--allow-dark-prefix` to `scripts/check_ui_rules.py` instead of rewriting unrelated components.

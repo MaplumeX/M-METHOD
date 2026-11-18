@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Static UI rule gate for mm-ui (§2.2.b, §3.2, §3.3, §4.1, §4.3, §4.4, §4.5, §5.3–§5.5, §6.1.3, Build gates).
 
-Checks CSS files and <style> blocks inside HTML/Vue/Svelte files against
+Checks CSS files, JSX/TSX utility classes, and <style> blocks inside HTML/Vue/Svelte files against
 mechanically verifiable Refactoring UI / M-METHOD rules, plus optional gates
 for System token ramps (--tokens), Pass 1 grayscale purity (--pass1),
-Build 3-line direction + 7-item constraint & state brief (--brief), and final
+Build 10-key Direction, State & Constraint Brief (--brief), and final
 delivery report (--report).
 
 Usage:
@@ -105,10 +105,66 @@ LAYOUT_ANIM_PROPS = {
     "padding-left",
 }
 
-ALLOW_RE = re.compile(r"mm-ui-allow\s+(§[\w.]+|15-direction)(?:\s*:\s*(.*))?", re.IGNORECASE)
+ALLOW_RE = re.compile(r"mm-ui-allow\s+(§[\w.]+|15-direction|13-beyond)(?:\s*:\s*(.*))?", re.IGNORECASE)
 STYLE_BLOCK_RE = re.compile(r"<style\b[^>]*>(.*?)</style>", re.IGNORECASE | re.DOTALL)
 PLACEHOLDER_COPY_RE = re.compile(r"\b(?:lorem\s+ipsum|dolor\s+sit\s+amet)\b", re.IGNORECASE)
 HTML_OR_BLOCK_COMMENT_RE = re.compile(r"<!--.*?-->|/\*.*?\*/", re.DOTALL)
+
+CSS_COLOR_LITERAL_RE = re.compile(
+    r"(?:oklch|hsl|rgb)\([^)]+\)|#[0-9a-f]{3,6}(?![0-9a-f])",
+    re.IGNORECASE,
+)
+CSS_NAMED_CHROMATIC_RE = re.compile(
+    r"\b(?:red|blue|green|yellow|orange|purple|violet|indigo|pink|cyan|teal|lime|"
+    r"fuchsia|magenta|aqua|navy|maroon|olive|crimson|coral|gold|salmon|tomato|"
+    r"turquoise|dodgerblue|royalblue|cornflowerblue|slateblue|rebeccapurple)\b",
+    re.IGNORECASE,
+)
+PASS1_COLOR_PROPS = {
+    "color",
+    "background",
+    "background-color",
+    "border",
+    "border-color",
+    "border-top",
+    "border-right",
+    "border-bottom",
+    "border-left",
+    "border-top-color",
+    "border-right-color",
+    "border-bottom-color",
+    "border-left-color",
+    "outline",
+    "outline-color",
+    "fill",
+    "stroke",
+}
+NON_COLOR_TOKEN_GROUPS = {
+    "space",
+    "spacing",
+    "text",
+    "font",
+    "weight",
+    "font-weight",
+    "leading",
+    "line-height",
+    "measure",
+    "control",
+    "radius",
+    "shadow",
+    "border-width",
+    "z",
+    "z-index",
+    "duration",
+    "ease",
+    "breakpoint",
+    "bp",
+    "opacity",
+}
+NON_COLOR_VALUE_RE = re.compile(
+    r"^(?:-?\d+(?:\.\d+)?(?:px|rem|em|ch|ms|s|vw|vh|dvh|%|deg|rad|grad|turn)?|clamp\(|cubic-bezier\()",
+    re.IGNORECASE,
+)
 
 INPUT_NON_BOX_SUFFIX_RE = re.compile(
     r"(?:^|[.\s>+~])(?:\.?[\w-]*input-(?:group|row|wrap|wrapper|label|help|hint|error|icon|prefix|suffix|box-label))\b",
@@ -693,7 +749,7 @@ def check_rules_in_file(
                                 )
                                 break
 
-        # 10. Pass 1 grayscale purity (§1.2.1): ban accent/status tokens and decorative non-inset shadows
+        # 10. Pass 1 grayscale purity (§1.2.1): ban accent/status tokens, chromatic CSS colors, and decorative non-inset shadows
         if pass1:
             for d in rule.declarations:
                 val_lower = d.value.lower()
@@ -711,6 +767,31 @@ def check_rules_in_file(
                             message=f"Pass 1 must stay grayscale; found accent/status token in '{d.prop}: {d.value}'",
                         )
                     )
+                elif d.prop in PASS1_COLOR_PROPS and not _is_allowed(rule, allows_by_line, d.line, "§1.2.1"):
+                    val_no_vars = re.sub(r"var\([^)]+\)", " ", val_lower)
+                    chromatic_hit = False
+                    for cm in CSS_COLOR_LITERAL_RE.finditer(val_no_vars):
+                        try:
+                            r, g, b = parse_color(cm.group(0))
+                        except ValueError:
+                            continue
+                        if (max(r, g, b) - min(r, g, b)) / 255.0 > 0.18:
+                            chromatic_hit = True
+                            break
+                    if not chromatic_hit and CSS_NAMED_CHROMATIC_RE.search(val_no_vars):
+                        chromatic_hit = True
+                    if chromatic_hit:
+                        findings.append(
+                            Finding(
+                                severity="ERROR",
+                                rule_id="§1.2.1",
+                                code="pass1-color-leak",
+                                file=file_path,
+                                line=d.line,
+                                selector=sel,
+                                message=f"Pass 1 must stay grayscale; found chromatic color in '{d.prop}: {d.value}'",
+                            )
+                        )
                 if d.prop == "box-shadow" and val_lower not in ("none", "0") and "inset" not in val_lower:
                     if not _is_allowed(rule, allows_by_line, d.line, "§1.2.1"):
                         findings.append(
@@ -840,7 +921,12 @@ def _extract_class_attributes(text: str) -> list[tuple[int, str, str, list[str]]
     return results
 
 
-def check_utility_classes_in_file(file_path: str, text: str, pass1: bool = False) -> list[Finding]:
+def check_utility_classes_in_file(
+    file_path: str,
+    text: str,
+    pass1: bool = False,
+    allow_dark_prefix: bool = False,
+) -> list[Finding]:
     """Check Tailwind / utility-class rules in .tsx, .jsx, .html, .vue, and .svelte files."""
     findings: list[Finding] = []
     allows = _collect_line_allows(text)
@@ -891,7 +977,7 @@ def check_utility_classes_in_file(file_path: str, text: str, pass1: bool = False
                     )
                 )
 
-            if DARK_PREFIX_RE.match(tok) and not _utility_allowed(allows, line, "13-beyond"):
+            if not allow_dark_prefix and DARK_PREFIX_RE.match(tok) and not _utility_allowed(allows, line, "13-beyond"):
                 findings.append(
                     Finding(
                         "ERROR",
@@ -900,7 +986,7 @@ def check_utility_classes_in_file(file_path: str, text: str, pass1: bool = False
                         file_path,
                         line,
                         sel,
-                        f"'{tok}' hardcodes dark: override on component; swap semantic tokens under [data-theme='dark'] instead",
+                        f"'{tok}' hardcodes dark: override on component; swap semantic tokens under [data-theme='dark'] instead (or pass --allow-dark-prefix for legacy dark: codebases)",
                     )
                 )
 
@@ -1064,7 +1150,11 @@ def check_placeholder_copy(file_path: str, text: str) -> list[Finding]:
     return findings
 
 
-def scan_path(target: Path, pass1: bool = False) -> tuple[list[Finding], dict[str, int]]:
+def scan_path(
+    target: Path,
+    pass1: bool = False,
+    allow_dark_prefix: bool = False,
+) -> tuple[list[Finding], dict[str, int]]:
     files: list[Path] = []
     if target.is_file():
         if target.suffix.lower() in ALL_SCAN_EXTENSIONS:
@@ -1092,12 +1182,27 @@ def scan_path(target: Path, pass1: bool = False) -> tuple[list[Finding], dict[st
                 start_line = text[: match.start(1)].count("\n") + 1
                 rules, allows = parse_css_rules(style_text, start_line=start_line)
                 all_findings.extend(check_rules_in_file(str(path), rules, allows, pass1=pass1))
-            all_findings.extend(check_utility_classes_in_file(str(path), text, pass1=pass1))
+            all_findings.extend(
+                check_utility_classes_in_file(str(path), text, pass1=pass1, allow_dark_prefix=allow_dark_prefix)
+            )
             all_findings.extend(check_placeholder_copy(str(path), text))
         elif ext in JSX_EXTENSIONS:
-            all_findings.extend(check_utility_classes_in_file(str(path), text, pass1=pass1))
+            all_findings.extend(
+                check_utility_classes_in_file(str(path), text, pass1=pass1, allow_dark_prefix=allow_dark_prefix)
+            )
             all_findings.extend(check_placeholder_copy(str(path), text))
     return all_findings, counts
+
+
+def _is_non_color_token(group: str, val: str, explicit_color: bool) -> bool:
+    if explicit_color:
+        return False
+    group_parts = {part for part in re.split(r"[._-]+", group.lower()) if part}
+    if group.lower() in NON_COLOR_TOKEN_GROUPS or bool(group_parts & NON_COLOR_TOKEN_GROUPS):
+        return True
+    if NON_COLOR_VALUE_RE.match(val.strip()):
+        return True
+    return False
 
 
 def _rgb_to_hsl(rgb: tuple[int, int, int]) -> tuple[float, float, float]:
@@ -1123,7 +1228,12 @@ def check_tokens_file(path: Path) -> list[Finding]:
                 return
             step_keys = {k: v for k, v in obj.items() if re.fullmatch(r"\d{2,3}", str(k)) and isinstance(v, str)}
             if step_keys and prefix:
+                parts = prefix.lower().split(".")
+                explicit_color = "color" in parts or "colors" in parts
+                leaf = parts[-1]
                 for k, v in step_keys.items():
+                    if _is_non_color_token(leaf, v, explicit_color):
+                        continue
                     ramps.setdefault(prefix, {})[int(k)] = (v, 1)
                 return
             for k, v in obj.items():
@@ -1132,10 +1242,11 @@ def check_tokens_file(path: Path) -> list[Finding]:
         walk_json(data)
     else:
         for lineno, line in enumerate(text.splitlines(), 1):
-            m = re.search(r"--(?:color-)?([a-zA-Z0-9_-]+)-(\d{2,3})\s*:\s*([^;]+);", line)
+            m = re.search(r"--(color-)?([a-zA-Z0-9_-]+)-(\d{2,3})\s*:\s*([^;]+);", line)
             if m:
-                group, step_s, val = m.group(1), m.group(2), m.group(3).strip()
-                if val.startswith("var("):
+                explicit_color = bool(m.group(1))
+                group, step_s, val = m.group(2), m.group(3), m.group(4).strip()
+                if val.startswith("var(") or _is_non_color_token(group, val, explicit_color):
                     continue
                 ramps.setdefault(group, {})[int(step_s)] = (val, lineno)
 
@@ -1271,8 +1382,18 @@ BRIEF_REQUIRED_KEYS = (
 REQUIRED_BUILD_LENSES = ("02", "03", "04", "06", "08", "09", "10", "15")
 
 
+LIGHTWEIGHT_BRIEF_REQUIRED_KEYS = (
+    ("Build scope:", "mode-build", "missing 'Build scope: lightweight' declaration"),
+    ("Direction inherited:", "15-direction", "missing 'Direction inherited:' sibling/DESIGN.md reference"),
+    ("Rules read:", "Read Gate", "missing 'Rules read:' citation line"),
+    ("Canvas & measure:", "§3.3 / §4.3", "missing 'Canvas & measure:' constraint"),
+    ("State matrix:", "mode-build / §8.4", "missing 'State matrix:' state coverage declaration"),
+)
+REQUIRED_LIGHTWEIGHT_REFS = ("DESIGN", "09", "10")
+
+
 def check_brief_files(paths: list[Path]) -> list[Finding]:
-    """Verify the 3-line direction + 7-item Constraint & State Brief schema and Read Gate citations."""
+    """Verify the 10-key Direction, State & Constraint Brief (or 5-key Lightweight Build brief) and Read Gate citations."""
     combined_parts: list[str] = []
     for p in paths:
         combined_parts.append(p.read_text(encoding="utf-8", errors="replace"))
@@ -1280,8 +1401,13 @@ def check_brief_files(paths: list[Path]) -> list[Finding]:
     ref_file = str(paths[0])
     findings: list[Finding] = []
 
+    is_lightweight = bool(
+        re.search(r"^\s*(?:[/*#-]*\s*)?Build scope:\s*lightweight\b", combined, re.IGNORECASE | re.MULTILINE)
+    )
+    required_schema = LIGHTWEIGHT_BRIEF_REQUIRED_KEYS if is_lightweight else BRIEF_REQUIRED_KEYS
+
     extracted_vals: dict[str, str] = {}
-    for key, rule_id, msg in BRIEF_REQUIRED_KEYS:
+    for key, rule_id, msg in required_schema:
         m = re.search(rf"^\s*(?:[/*#-]*\s*)?{re.escape(key)}\s*(.*)$", combined, re.IGNORECASE | re.MULTILINE)
         if not m or not m.group(1).strip():
             findings.append(Finding("ERROR", rule_id, "missing-brief-key", ref_file, 1, key, msg))
@@ -1290,19 +1416,38 @@ def check_brief_files(paths: list[Path]) -> list[Finding]:
 
     rules_val = extracted_vals.get("Rules read:", "")
     if rules_val:
-        missing_lenses = [lens for lens in REQUIRED_BUILD_LENSES if not re.search(rf"\b{lens}(?:-[\w]+)?\b", rules_val)]
-        if missing_lenses:
-            findings.append(
-                Finding(
-                    "ERROR",
-                    "Read Gate",
-                    "missing-lens-read",
-                    ref_file,
-                    1,
-                    "Rules read",
-                    f"Rules read is missing required Build lens reference(s): {', '.join(missing_lenses)} (expected 02, 03, 04, 06, 08, 09, 10, 15)",
+        if is_lightweight:
+            missing_refs = [
+                ref
+                for ref in REQUIRED_LIGHTWEIGHT_REFS
+                if not re.search(rf"\b{ref}(?:-[\w.]+)?\b", rules_val, re.IGNORECASE)
+            ]
+            if missing_refs:
+                findings.append(
+                    Finding(
+                        "ERROR",
+                        "Read Gate",
+                        "missing-lens-read",
+                        ref_file,
+                        1,
+                        "Rules read",
+                        f"Lightweight Build Rules read is missing required reference(s): {', '.join(missing_refs)} (expected DESIGN.md, 09, 10)",
+                    )
                 )
-            )
+        else:
+            missing_lenses = [lens for lens in REQUIRED_BUILD_LENSES if not re.search(rf"\b{lens}(?:-[\w]+)?\b", rules_val)]
+            if missing_lenses:
+                findings.append(
+                    Finding(
+                        "ERROR",
+                        "Read Gate",
+                        "missing-lens-read",
+                        ref_file,
+                        1,
+                        "Rules read",
+                        f"Rules read is missing required Build lens reference(s): {', '.join(missing_lenses)} (expected 02, 03, 04, 06, 08, 09, 10, 15)",
+                    )
+                )
         if "§" not in rules_val:
             findings.append(
                 Finding(
@@ -1388,8 +1533,18 @@ def check_report_file(path: Path) -> list[Finding]:
             )
         )
 
-    verdicts = re.findall(r"\b(Clear|Hit)\b", text, re.IGNORECASE)
-    if len(verdicts) < 5 or not re.search(r"AI\s+Slop\s+Test", text, re.IGNORECASE):
+    slop_heading = re.search(r"^.*AI\s+Slop\s+Test.*$", text, re.IGNORECASE | re.MULTILINE)
+    slop_verdicts: list[str] = []
+    if slop_heading:
+        tail = text[slop_heading.end() :]
+        next_heading = re.search(r"^\s*#{1,3}\s+\S", tail, re.MULTILINE)
+        slop_section = tail[: next_heading.start()] if next_heading else tail
+        for ln in slop_section.splitlines():
+            if re.match(r"^\s*(?:[-*]|\d+\.|\|)\s+", ln):
+                m_v = re.search(r"\b(Clear|Hit)\b", ln, re.IGNORECASE)
+                if m_v:
+                    slop_verdicts.append(m_v.group(1))
+    if not slop_heading or len(slop_verdicts) < 5:
         findings.append(
             Finding(
                 "ERROR",
@@ -1398,7 +1553,7 @@ def check_report_file(path: Path) -> list[Finding]:
                 label,
                 1,
                 "AI Slop Test",
-                "report must include 'AI Slop Test' with all 5 reflex checks marked Clear or Hit",
+                "report must include an 'AI Slop Test' section with 5 structured list/table lines each marked Clear or Hit",
             )
         )
 
@@ -1427,8 +1582,18 @@ def main() -> int:
     ap.add_argument("paths", nargs="*", help="CSS/HTML/Vue/Svelte files or directories to scan")
     ap.add_argument("--strict", action="store_true", help="treat warnings as failures (exit 1)")
     ap.add_argument("--pass1", action="store_true", help="enforce Pass 1 grayscale purity (no accent/status/shadows)")
+    ap.add_argument(
+        "--allow-dark-prefix",
+        action="store_true",
+        help="allow Tailwind dark: utility overrides when adopting an existing dark: codebase per Step 0",
+    )
     ap.add_argument("--tokens", metavar="FILE", help="validate 9-step color ramps in tokens.css or tokens.json")
-    ap.add_argument("--brief", nargs="+", metavar="FILE", help="validate 3-line direction + 7-item constraint & state brief")
+    ap.add_argument(
+        "--brief",
+        nargs="+",
+        metavar="FILE",
+        help="validate 10-key Direction, State & Constraint Brief (or 5-key Lightweight Build brief)",
+    )
     ap.add_argument("--report", metavar="FILE", help="validate delivery report (§id traceability, 5-item AI Slop Test, unverified items)")
     args = ap.parse_args()
 
@@ -1453,7 +1618,11 @@ def main() -> int:
     findings: list[Finding] = []
     total_counts: dict[str, int] = {}
     for raw_path in args.paths:
-        path_findings, counts = scan_path(Path(raw_path), pass1=args.pass1)
+        path_findings, counts = scan_path(
+            Path(raw_path),
+            pass1=args.pass1,
+            allow_dark_prefix=args.allow_dark_prefix,
+        )
         findings.extend(path_findings)
         for ext, cnt in counts.items():
             total_counts[ext] = total_counts.get(ext, 0) + cnt

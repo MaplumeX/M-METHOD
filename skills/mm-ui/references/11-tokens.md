@@ -158,7 +158,7 @@ For a Tailwind expression see `12-tailwind.md` — an optional mapping, never a 
 
 ## 9 · Record the decision
 
-A token set is a **durable decision**. Write a `proposed/design/` ADR per `adr-standard.md`:
+A token set is a **durable decision**. If `.agents/ADR/` is initialized, write a `proposed/design/` ADR per `.agents/ADR/AGENTS.md`:
 
 - Why this base color, typography/personality, radius/depth philosophy, and scales; put the
   rejected options under `## Alternatives considered`.

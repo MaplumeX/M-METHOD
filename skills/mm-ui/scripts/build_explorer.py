@@ -59,7 +59,7 @@ def _load_candidates(inputs: list[str], out_path: Path) -> tuple[str, str, list[
                     "thesis": "",
                     "density": "standard",
                     "trade_offs": "",
-                    "recommended": idx == 1,
+                    "recommended": False,
                     "src": rel_src,
                 }
             )
@@ -189,7 +189,7 @@ def render_explorer_html(title: str, recommendation: str, candidates: list[dict[
       margin: 0 auto;
       padding: 24px;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
       gap: 24px;
     }}
     .dir-card {{
@@ -261,6 +261,7 @@ def render_explorer_html(title: str, recommendation: str, candidates: list[dict[
     }}
     .frame-shell {{
       width: calc(var(--frame-w) * var(--frame-scale));
+      max-width: 100%;
       height: 360px;
       overflow: hidden;
       border: 1px solid var(--border);
@@ -345,11 +346,21 @@ def render_explorer_html(title: str, recommendation: str, candidates: list[dict[
 
   <script>
     const root = document.documentElement;
+    let currentFrameW = 1440;
+    function fitFrames() {{
+      root.style.setProperty('--frame-w', `${{currentFrameW}}px`);
+      for (const wrap of document.querySelectorAll('.stage-wrap')) {{
+        const availW = Math.max(240, wrap.clientWidth - 32);
+        const scale = Math.min(1, availW / currentFrameW);
+        wrap.style.setProperty('--frame-scale', scale.toFixed(4));
+      }}
+    }}
+    fitFrames();
+    window.addEventListener('resize', fitFrames);
     for (const btn of document.querySelectorAll('.vp-btn')) {{
       btn.addEventListener('click', () => {{
-        const isMobile = btn.dataset.vp === 'mobile';
-        root.style.setProperty('--frame-w', isMobile ? '400px' : '1440px');
-        root.style.setProperty('--frame-scale', isMobile ? '0.85' : '0.32');
+        currentFrameW = btn.dataset.vp === 'mobile' ? 400 : 1440;
+        fitFrames();
         for (const b of document.querySelectorAll('.vp-btn')) {{
           b.setAttribute('aria-pressed', String(b === btn));
         }}

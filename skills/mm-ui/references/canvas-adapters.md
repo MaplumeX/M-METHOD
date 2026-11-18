@@ -12,7 +12,7 @@ Single-file or local `.html` surface (e.g. `preview.html` in `System`, or a temp
   - **Prototype-first `Build`**: validating layout, typography, grayscale hierarchy (`§1.2.1`), and all interactive states of a complex new page before wiring framework routing, state stores, or API hooks.
 - **Rules**:
   - Must still obey `mm-ui` semantic tokens, scales (`§3.2`, `§4.1`), realistic domain data (never `Lorem ipsum`), and `check_ui_rules.py` checks.
-  - Include a lightweight, non-intrusive **state switcher bar** (fixed corner pill or top dev strip) so reviewers can toggle `default` / `empty` / `loading` / `error` / `edge` (plus `light` / `dark` if enabled) directly in the browser.
+  - Include a lightweight, non-intrusive **state switcher bar** (fixed corner pill or top dev strip) with `data-state="<state>"` (or `data-mm-state="<state>"`) attributes on the buttons — and/or `?state=<state>` query-param handling — so both human reviewers and `scripts/shoot.py --states default,empty,loading,error` can toggle `default` / `empty` / `loading` / `error` / `edge` (plus `light` / `dark` if enabled) automatically.
   - Mark disposable exploration sketches clearly (`§1.2.2`) so they are cleaned up or promoted cleanly into production code.
 
 ## 2. Design Tool Canvas via MCP (Figma / Paper / pen.dev)

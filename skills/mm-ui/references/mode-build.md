@@ -19,6 +19,26 @@ Read **all 8** of these files before drafting your Constraint Brief (do not defe
 - Also read [`07-images.md`](07-images.md) when working with photos, avatars, or non-trivial graphics, [`16-layout-patterns.md`](16-layout-patterns.md) when building fluid `clamp()` landing/scroll-narrative surfaces or `100dvh` multi-pane workbenches, [`canvas-adapters.md`](canvas-adapters.md) when choosing Prototype-first / Design Tool MCP / Production Code, and project `DESIGN.md` (if present) to reuse indexed components (`mode-sync.md`).
 - If layout structure or interaction architecture is still open, run [`mode-explore.md`](mode-explore.md) first to compare 3 structural options before locking Build.
 
+## Lightweight Build (mature-system localized change)
+
+When **all** of the following hold:
+1. A project `DESIGN.md` and token system already exist (`System` / `Sync` already done);
+2. The layout architecture and aesthetic direction are already locked by sibling components;
+3. You are adding or extending a **localized component or section** (not creating a new page shell or new surface archetype):
+
+- **Reduced Read Gate**: read project `DESIGN.md`, [`09-antipatterns.md`](09-antipatterns.md), [`10-recipes.md`](10-recipes.md), and only the lens file(s) relevant to the widget (skip reading all 8 files upfront).
+- **5-key Lightweight Brief** (validated by `scripts/check_ui_rules.py <target> --brief <brief-file>`):
+
+```text
+Build scope: lightweight
+Direction inherited: <path to DESIGN.md / sibling component>
+Rules read: <DESIGN.md + 09-antipatterns + 10-recipes + specific §id rules applied>
+Canvas & measure: <explicit container/element width/max-width>
+State matrix: <default, empty, loading, error, edge (or explicit N/A reason per state)>
+```
+
+- **Still mandatory**: realistic domain copy, all applicable states in the State Matrix, `Pass 1 → Pass 2` (or grayscale skeleton first when adding a new widget), `scripts/check_ui_rules.py`, and visual verification (or explicit unverified list) + `§id` / 5-item AI Slop Test in the delivery report.
+
 ## Planning-period boundary
 
 If currently in `mm-plan` without implementation authorization:

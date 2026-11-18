@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import colorsys
+import math
 import sys
 
 BODY = 4.5
@@ -38,8 +39,72 @@ def _parse_percent(token: str) -> float:
     return val / 100.0
 
 
+def _parse_hue_deg(token: str) -> float:
+    t = token.strip().lower()
+    if t == "none":
+        return 0.0
+    if t.endswith("turn"):
+        return (float(t[:-4]) * 360.0) % 360.0
+    if t.endswith("grad"):
+        return (float(t[:-4]) * 0.9) % 360.0
+    if t.endswith("rad"):
+        return math.degrees(float(t[:-3])) % 360.0
+    if t.endswith("deg"):
+        return float(t[:-3]) % 360.0
+    return float(t) % 360.0
+
+
+def _oklch_to_rgb(inner: str) -> tuple[int, int, int]:
+    body = inner.strip()
+    if "/" in body:
+        color_part, alpha_part = body.split("/", 1)
+        a_tok = alpha_part.strip()
+        alpha = _parse_percent(a_tok) if a_tok.endswith("%") else float(a_tok)
+        if alpha < 1.0:
+            raise ValueError(f"translucent oklch alpha ({a_tok}) cannot be checked without backdrop")
+        body = color_part.strip()
+
+    parts = _split_css_args(body)
+    if len(parts) != 3:
+        raise ValueError(f"expected 3 oklch channels: {inner!r}")
+
+    l_tok, c_tok, h_tok = parts
+    l_val = _parse_percent(l_tok) if l_tok.endswith("%") else float(l_tok)
+    if not 0.0 <= l_val <= 1.0:
+        raise ValueError(f"oklch lightness out of range [0, 1]: {l_tok!r}")
+    c_val = _parse_percent(c_tok) * 0.4 if c_tok.endswith("%") else float(c_tok)
+    if c_val < 0.0:
+        raise ValueError(f"oklch chroma must be >= 0: {c_tok!r}")
+    h_deg = _parse_hue_deg(h_tok)
+
+    h_rad = math.radians(h_deg)
+    a = c_val * math.cos(h_rad)
+    b = c_val * math.sin(h_rad)
+
+    l_ = l_val + 0.3963377774 * a + 0.2158037573 * b
+    m_ = l_val - 0.1055613458 * a - 0.0638541728 * b
+    s_ = l_val - 0.0894841775 * a - 1.2914855480 * b
+
+    l_cubed = l_ * l_ * l_
+    m_cubed = m_ * m_ * m_
+    s_cubed = s_ * s_ * s_
+
+    lin_rgb = (
+        +4.0767416621 * l_cubed - 3.3077115913 * m_cubed + 0.2309699292 * s_cubed,
+        -1.2684380046 * l_cubed + 2.6097574011 * m_cubed - 0.3413193965 * s_cubed,
+        -0.0041960863 * l_cubed - 0.7034186147 * m_cubed + 1.7076147010 * s_cubed,
+    )
+
+    out: list[int] = []
+    for c_lin in lin_rgb:
+        c_clamped = max(0.0, min(1.0, c_lin))
+        c_srgb = 12.92 * c_clamped if c_clamped <= 0.0031308 else 1.055 * (c_clamped ** (1.0 / 2.4)) - 0.055
+        out.append(round(max(0.0, min(1.0, c_srgb)) * 255))
+    return (out[0], out[1], out[2])
+
+
 def parse_color(value: str) -> tuple[int, int, int]:
-    """Parse #rgb, #rrggbb, rgb(...), or hsl(...) into an 8-bit RGB tuple."""
+    """Parse #rgb, #rrggbb, rgb(...), hsl(...), or oklch(...) into an 8-bit RGB tuple."""
     v = value.strip().lower()
     if v.startswith("#"):
         v = v[1:]
@@ -59,12 +124,14 @@ def parse_color(value: str) -> tuple[int, int, int]:
     if v.startswith("hsl(") and v.endswith(")"):
         parts = _split_css_args(v[4:-1])
         if len(parts) == 3:
-            h_raw = parts[0].removesuffix("deg")
-            h = (float(h_raw) % 360.0) / 360.0
+            h_deg = _parse_hue_deg(parts[0])
+            h = h_deg / 360.0
             s = _parse_percent(parts[1])
             l = _parse_percent(parts[2])
             r, g, b = colorsys.hls_to_rgb(h, l, s)
             return (round(r * 255), round(g * 255), round(b * 255))
+    if v.startswith("oklch(") and v.endswith(")"):
+        return _oklch_to_rgb(v[6:-1])
     raise ValueError(f"cannot parse color: {value!r}")
 
 

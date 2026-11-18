@@ -32,18 +32,18 @@ description: 提炼自《Refactoring UI》并融合结构探索、全状态设�
 4. **深色模式**：已支持、规划中，还是不支持。
 5. **既有字号与间距刻度**：从配置文件提取真实值，绝不凭记忆猜测。
 
-**项目既有体系永远优先**：已有设计系统与组件时翻译并索引使用（必要时先走 `Sync` 纳入 `DESIGN.md`），绝不擅自覆盖、重复造轮子、静默迁移或引入新的构建依赖。
+**项目既有体系永远优先**：已有设计系统与组件时翻译并索引使用（必要时先走 `Sync` 纳入 `DESIGN.md`），绝不擅自覆盖、重复造轮子、静默迁移或引入新的构建依赖。若既有 Tailwind 项目已普遍采用 `dark:` 类名体系，运行 `check_ui_rules.py` 时加 `--allow-dark-prefix`。
 
 ## 模式路由
 
 命中第一条即停止；任务混杂时按 `Explore → System / Sync → Build → Refine` 分段推进：
 
-| 触发条件 | 模式 | 必读剧本与透镜（Read Gate） | 必跑脚本门禁 |
+| 触发条件 | 模式 | 必读剧本与透镜（Read Gate） | 必跑门禁（静态必跑；浏览器可用时加 `shoot.py`） |
 |---|---|---|---|
 | 布局结构/交互流未定，或要求「给几个方案 / 对比方向」 | **Explore** | [`mode-explore.md`](references/mode-explore.md) + `01`、`03`、`15`、`16`、`canvas-adapters.md` | Peer Analysis + 3 个结构/交互/密度差异方案 + 1 个主推（授权写原型时可用 `build_explorer.py` + `shoot.py` 生成并排对比与 `sheet.png`） |
 | 尚无或需替换设计系统 | **System** | [`mode-system.md`](references/mode-system.md) + `11-tokens.md`、`05-color.md`、`15-direction.md` | `generate_ramp.py` + `check_contrast.py` + `check_ui_rules.py --tokens` |
 | 将既有代码 Token/组件同步进 `DESIGN.md`，或按规范改动同步回代码 | **Sync** | [`mode-sync.md`](references/mode-sync.md) + `11-tokens.md`、`13-beyond.md`、`canvas-adapters.md` | 入站跑 `check_ui_rules.py` 盘点缺口；出站先出影响 Diff 再跑全套校验 |
-| 新增页面 / 组件 / 区块 | **Build** | [`mode-build.md`](references/mode-build.md) + `02`、`03`、`04`、`06`、`08`、`09`、`10`、`15`（展示/工作台补读 `16`） | `check_ui_rules.py --pass1` → 终检（`--brief`、`--report`、`check_contrast.py`、`shoot.py --strict`） |
+| 新增页面 / 区块（含**轻量构建**：成熟体系内局部组件可走 `mode-build.md` Lightweight Build） | **Build** | [`mode-build.md`](references/mode-build.md) + `02`、`03`、`04`、`06`、`08`、`09`、`10`、`15`（展示/工作台补读 `16`；轻量构建读 `DESIGN.md` + `09`、`10` + 命中透镜） | `check_ui_rules.py --pass1` → 终检（`--brief`、`--report`、`check_contrast.py`；有浏览器时跑 `shoot.py --strict`） |
 | 修改现有界面 | **Refine** | [`mode-refine-review.md`](references/mode-refine-review.md) + `09-antipatterns.md` + 命中透镜 | `check_ui_rules.py` + `shoot.py` 前后对照（改配色补 `check_contrast.py`） |
 | 只评审不改代码 | **Review** | [`mode-refine-review.md`](references/mode-refine-review.md) + `09-antipatterns.md`、`15-direction.md` | 独立视角审图（`shoot.py`）+ CRAP/认知负荷 + 5 项 AI Slop Test + 全状态覆盖裁决 |
 
@@ -67,3 +67,12 @@ description: 提炼自《Refactoring UI》并融合结构探索、全状态设�
 - **模式剧本与画布**：[`mode-explore.md`](references/mode-explore.md) · [`mode-system.md`](references/mode-system.md) · [`mode-sync.md`](references/mode-sync.md) · [`mode-build.md`](references/mode-build.md) · [`mode-refine-review.md`](references/mode-refine-review.md) · [`canvas-adapters.md`](references/canvas-adapters.md)
 - **规则与配方（151 条规则，总索引 [`00-coverage.md`](references/00-coverage.md)）**：`01-starting` / `02-hierarchy` / `03-spacing` / `04-typography` / `05-color` / `06-depth` / `07-images` / `08-finishing` / `09-antipatterns` / `10-recipes` / `11-tokens` / `12-tailwind` / `13-beyond` / `14-laws` / `15-direction` / `16-layout-patterns`
 - **自动化脚本**：[`check_ui_rules.py`](scripts/check_ui_rules.py) · [`check_contrast.py`](scripts/check_contrast.py) · [`generate_ramp.py`](scripts/generate_ramp.py) · [`shoot.py`](scripts/shoot.py) · [`build_explorer.py`](scripts/build_explorer.py)
+
+## 退出条件
+
+满足当前模式对应的收口状态即结束（不擅自延续为无边界对话，也不自动触发 `git commit` 或 `mm-land`）：
+
+- **规划期只读**：已返回结构探索草案、设计系统决策草案或分步实施建议至 `mm-plan` / 用户确认，工作区零文件写入。
+- **Explore**：已输出 Peer Analysis、3 个结构/交互/密度差异方案与 1 个主推建议（含原型或 ASCII 骨架），并在选择停靠点等待用户拍板。
+- **System / Sync / Build / Refine**：对应模式的静态门禁（`check_ui_rules.py`、`check_contrast.py`）全部退出 `0`，视觉对比截图已核验（或已逐项列出「未核验项清单」），交付汇报已附 `§id` 追溯与 5 项 AI Slop Test 逐条裁决，作用域跨单页的长期决策已按约定记入 `proposed/design/`。
+- **Review**：已按严重度输出 `§id` / CRAP / 状态缺口发现、5 项 AI Slop Test 裁决、全状态与运行时检查结论，以及明确声明的未检查项，源码零修改。
