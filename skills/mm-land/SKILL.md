@@ -1,6 +1,6 @@
 ---
 name: mm-land
-description: 在工作验收通过后收尾归档：删除对应的 .plan.md 文件，将计划列出的 ADR 从 proposed/ 升格移入 implemented/，并一并归档计划头部 Archives: 声明的旧 implemented/ 记录。适用于用户明确表示验收通过（如「验收通过」「做完了」「可以了」「land it」「close it out」），或明确要求放弃/归档某份 ADR 时。严禁仅凭主观判断「代码看起来写完了」就自行调用。
+description: "在工作验收通过后收尾归档：删除对应的 .plan.md 文件，将计划列出的 ADR 从 proposed/ 升格移入 implemented/，并一并归档计划头部 Archives: 声明的旧 implemented/ 记录。适用于用户明确表示验收通过（如「验收通过」「做完了」「可以了」「land it」「close it out」），或明确要求放弃/归档某份 ADR 时。严禁仅凭主观判断「代码看起来写完了」就自行调用。"
 disable-model-invocation: true
 ---
 
