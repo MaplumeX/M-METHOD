@@ -1,6 +1,6 @@
 ---
 name: mm-land
-description: 在工作验收通过后收尾归档：删除对应的 .plan.md 文件，并将计划列出的 ADR 从 proposed/ 升格移入 implemented/。适用于用户明确表示验收通过（如「验收通过」「做完了」「可以了」「land it」「close it out」），或明确要求放弃/归档某份 ADR 时。严禁仅凭主观判断「代码看起来写完了」就自行调用。
+description: 在工作验收通过后收尾归档：删除对应的 .plan.md 文件，将计划列出的 ADR 从 proposed/ 升格移入 implemented/，并一并归档计划头部 Archives: 声明的旧 implemented/ 记录。适用于用户明确表示验收通过（如「验收通过」「做完了」「可以了」「land it」「close it out」），或明确要求放弃/归档某份 ADR 时。严禁仅凭主观判断「代码看起来写完了」就自行调用。
 disable-model-invocation: true
 ---
 
@@ -24,9 +24,10 @@ disable-model-invocation: true
    - 存在多个且用户未指定 → 询问用户（可优先列出所有步骤 `Verify:` 均已记录完成的计划供确认），不要按时间戳猜测。
    - 不存在任何 `.plan.md` → 仍可对单份 ADR 归档，但必须明确说明缺少计划文件，并以用户指定的记录作为本次处理对象。
 
-2. **收集待交付 ADR**
+2. **收集待交付 ADR 与拟归档旧记录**
 
-   读取计划头部的全部 `ADR:` 行，其中列出的所有记录都将随本次交付一并升格；第一条为主记录。
+   - 读取计划头部的全部 `ADR:` 行，其中列出的所有记录都将随本次交付一并升格；第一条为主记录。
+   - 若计划头部存在 `Archives:` 行，收集全部拟随本次交付归档的既有 `implemented/` 记录，并确认它们当前确实位于 `implemented/`（绝不可包含 `proposed/` 记录）。
 
 3. **核对实际交付状态**
 
@@ -42,6 +43,7 @@ disable-model-invocation: true
 
    - 逐条检查 `## Steps` 中每一步内联 `Verify:` 旁记录的实测结果；若存在未记录或未运行的步骤，先补跑并核实。
    - 对照当前代码检查计划与 ADR 是否发生漂移（前提失效或核心决策已变更）。若核心决策与交付不符，停下并改为修订计划或起草替代 ADR，严禁带着过时决策静默升格。
+   - 若计划声明了 `Archives:`，结合实际交付结果复核每条旧记录是否仍满足 `.agents/ADR/AGENTS.md` 的 `## Archiving` 准则（确认未因实施折中而残留活跃约束）；若条件不再成立，停下请用户决定是否取消该条归档。
 
 6. **删除计划文件**
 
@@ -49,7 +51,7 @@ disable-model-invocation: true
    rm .agents/ADR/proposed/{delivery}.plan.md
    ```
 
-7. **逐一升格 ADR**
+7. **逐一升格 ADR 并归档计划声明的旧记录**
 
    先确保目标分类目录存在，再移动文件（一次交付可能横跨 `architecture`、`feature`、`design`、`process` 等多个分类，每份记录按各自所属分类移动，不可套用计划文件所在目录）：
 
@@ -59,28 +61,38 @@ disable-model-invocation: true
       .agents/ADR/implemented/{class}/{name}.md
    ```
 
-   按 `.agents/ADR/AGENTS.md` 更新每份记录：
+   按 `.agents/ADR/AGENTS.md` 更新每份升格记录：
    - 将 `Status: proposed` 改为 `Status: implemented`。
    - 将 `## Proposal` 改为 `## Decision`，改用现在时态陈述已交付的现实。
    - 将 `## Acceptance criteria` 和 `## Risks` 归并入 `## Consequences`，并将被用户豁免的 `## Verification` 缺口（`waived by user`）一并记入（单步调试细节随 `.plan.md` 删除，不搬入 ADR）。
    - 仅修正实施中变更的客观事实（路径、符号名、默认值、实际依赖版本）；若核心决策本身改变，停下并按替代记录流程处理。
 
-8. **修复全仓引用链接与替代反向链接**
-
-   由于相对路径编码了生命周期目录（同目录用裸文件名 `{name}.md`，跨目录按相对层级计算；位于 `proposed/` 根目录的 `.plan.md` 引用 `proposed/{class}/{name}.md` 时写作 `{class}/{name}.md`，记录移入 `implemented/` 或 `rejected/` 后应更新为 `../implemented/{class}/{name}.md` 或 `../rejected/{class}/{name}.md`），仅搜 `proposed/{class}/{name}` 会漏改。按文件名全仓检索：
+   若计划头部声明了 `Archives:`，紧接着逐一归档对应旧记录：
 
    ```bash
-   grep -rn --exclude-dir=.git --exclude-dir=node_modules "{name}.md" . 2>/dev/null
+   mkdir -p .agents/ADR/archived/{class}
+   mv .agents/ADR/implemented/{class}/{old}.md \
+      .agents/ADR/archived/{class}/{old}.md
    ```
 
-   - 根据引用方所在目录，将相对路径更新为新位置（同目录使用裸文件名，跨目录按相对层级计算）。
+   - 仅修改头部元数据：将 `Status: implemented` 改为 `Status: archived`，紧随其后新增一行 `Archived: YYYY-MM-DD`，再空一行。**正文一字不改**（保留 `implemented/` 结构且永久冻结）。
+
+8. **修复全仓引用链接与替代反向链接**
+
+   由于相对路径编码了生命周期目录（同目录用裸文件名 `{name}.md`，跨目录按相对层级计算；位于 `proposed/` 根目录的 `.plan.md` 引用 `proposed/{class}/{name}.md` 时写作 `{class}/{name}.md`，记录移入 `implemented/` 或 `rejected/` 后应更新为 `../implemented/{class}/{name}.md` 或 `../rejected/{class}/{name}.md`），仅搜原路径前缀会漏改。对本次所有升格记录（`{name}.md`）及连带归档记录（`{old}.md`）分别按文件名全仓检索：
+
+   ```bash
+   grep -rn --exclude-dir=.git --exclude-dir=node_modules "{file}.md" . 2>/dev/null
+   ```
+
+   - 根据引用方所在目录，将相对路径更新为新位置（同目录使用裸文件名，跨目录按相对层级计算；包含本次新升格 ADR 指向已归档旧记录的 `../../archived/{class}/{old}.md`）。
    - 代码注释中的 `ADR <date>-<slug>` 不含路径，无需改动。
-   - 严禁修改 `archived/` 中的历史冻结记录。
-   - 若本次记录替代了某份既有的 `implemented/` 记录，检查旧记录是否已补齐指向本新记录的替代链接（并将原本指向 `proposed/` 的链接更新为 `implemented/`），确保双向引用闭合。
+   - 严禁修改 `archived/` 中的历史冻结记录（含本次刚刚归档的旧记录）。
+   - 若本次记录替代了某份**仍留在 `implemented/`** 的既有记录，检查旧记录是否已补齐指向本新记录的替代链接（并将原本指向 `proposed/` 的链接更新为 `implemented/`），确保双向引用闭合；若旧记录已随本次交付移入 `archived/`，仅保持新记录指向 `archived/` 的单向链接，不改动旧记录正文。
 
 9. **汇报收尾**
 
-   向用户报告：已删除的 `.plan.md`、已升格的 ADR、调整的章节、修复的链接，以及后续待办（如提 PR、发版说明等）。若第 8 步更新了仍在 `proposed/` 中的其他 `.plan.md` 的 `Depends on:` / `Constrained by:` 链接，一并说明哪些后续 Plan 由此变为 **Ready**（或因前置移入 `rejected/` 而失效需修订）。保持工作区改动处于未提交状态，由用户决定何时暂存与提交。
+   向用户报告：已删除的 `.plan.md`、已升格的 ADR、已连带归档的旧 ADR（如有）、调整的章节、修复的链接，以及后续待办（如提 PR、发版说明等）。若第 8 步更新了仍在 `proposed/` 中的其他 `.plan.md` 的 `Depends on:` / `Constrained by:` 链接，一并说明哪些后续 Plan 由此变为 **Ready**（或因前置移入 `rejected/` 而失效需修订）。保持工作区改动处于未提交状态，由用户决定何时暂存与提交。
 
 ## 其他生命周期迁移（仅在用户明确指示时）
 
@@ -90,7 +102,9 @@ disable-model-invocation: true
 2. 按 `.agents/ADR/AGENTS.md` 判断：若属于有保留价值的误区/否决方向，先 `mkdir -p .agents/ADR/rejected/{class}` 并移入 `rejected/{class}/{name}.md`，将 `Status: proposed` 改为 `Status: rejected — <one line why>`，其余正文保持冻结；否则直接删除提案文件。
 3. 按主流程第 8 步检索 `{name}.md` 并修复或清理活跃文件的入站链接，汇报变更并保持未提交。
 
-### 归档历史记录（`implemented/` → `archived/`）
+### 独立归档历史记录（`implemented/` → `archived/`）
+
+适用于无关联新计划、用户直接要求清理某份陈旧 `implemented/` 记录的场景：
 
 1. 确认该记录已完全交付、不再指导未来工作，且不涉及 `.agents/ADR/AGENTS.md` 中需保持活跃的豁免条件。
 2. `mkdir -p .agents/ADR/archived/{class}` 后移入 `archived/{class}/{name}.md`。
@@ -99,7 +113,7 @@ disable-model-invocation: true
 
 ## 退出条件
 
-- **交付升格**：对应 `.plan.md` 已删除；计划所列全部记录均已迁入 `implemented/` 且 `Status: implemented`，不再残留 `## Proposal`、`## Plan`、`## Acceptance criteria`、`## Risks` 标题。
+- **交付升格**：对应 `.plan.md` 已删除；计划所列全部 `ADR:` 均已迁入 `implemented/` 且 `Status: implemented`，不再残留 `## Proposal`、`## Plan`、`## Acceptance criteria`、`## Risks` 标题；计划头部 `Archives:` 声明的旧记录（如有）均已按规范迁入 `archived/`（仅改头部元数据、正文零改动）。
 - **放弃或归档**：对应 `.plan.md` 已清理（如适用），记录已迁入 `rejected/` 或 `archived/` 且元数据符合 `.agents/ADR/AGENTS.md`（`archived/` 正文零改动）。
 - 除 `archived/` 历史文件外，全仓无因本次迁移失效的入站链接。
 - 已向用户完整报告所有变更路径与待跟进项。
