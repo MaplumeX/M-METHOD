@@ -137,19 +137,19 @@ An irreversible step deserves to be called irreversible.
 
 ## Stop points
 
-Two kinds of stop points, each bound explicitly to a step number:
+Plans are meant to run straight through to completion without mid-plan check-ins.
+If a milestone genuinely requires human sign-off before later work builds on it,
+split it into separate plans linked with `Depends on:` rather than pausing halfway.
 
-- **Hard gate (mandatory pause)**: the executor must stop after the named step and
-  wait for explicit user confirmation before starting the next step.
-- **Conditional gate (trigger pause)**: the two or three things most likely to go
-  wrong, and the exact point at which the executor must stop and ask rather than
-  inventing a workaround.
-
-Format them as scannable, step-anchored items:
+Use `## Stop points` only for concrete, step-anchored trigger conditions — the two
+or three things most likely to go wrong where the executor must stop and ask rather
+than inventing a workaround, plus any irreversible external action (production
+migration, package publish, outbound message) that requires explicit confirmation
+before running:
 
 ```markdown
-- **Hard gate (After Step 2)**: confirm `Session` fields and `focusedSec` semantics before continuing.
-- **Conditional gate (After Step 5)**: if the notification prompt fails in a real browser, stop and ask whether to move it into Settings rather than adding retries.
+- **Step 3**: if the schema migration hits existing rows with null `workspace_id`, stop and ask for the backfill rule rather than defaulting silently.
+- **Step 5**: if the notification prompt fails in a real browser, stop and ask whether to move it into Settings rather than adding retries.
 ```
 
 ## When the plan changes
