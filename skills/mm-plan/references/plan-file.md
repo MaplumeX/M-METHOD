@@ -16,6 +16,7 @@ ADR: <class>/<record>.md
 ADR: <other-class>/<other-record>.md
 Depends on: <class>/<prerequisite-record>.md
 Constrained by: ../implemented/<class>/<constraint-record>.md
+Archives: ../implemented/<class>/<retired-record>.md
 
 ## Scope
 ## Not in scope
@@ -56,6 +57,14 @@ Both `Depends on:` and `Constrained by:` double as execution order gates: while 
 referenced record still sits under `proposed/`, this plan is blocked behind it; once
 `mm-land` promotes that record and rewrites the link to `../implemented/...`, this
 plan becomes ready.
+
+`Archives:` (optional, repeatable) lists existing `implemented/` record(s)
+(`../implemented/<class>/<record>.md`) that this delivery retires or supersedes and
+that satisfy the archiving criteria in `.agents/ADR/AGENTS.md` (no load-bearing
+constraints remain, yet historical value warrants keeping a frozen snapshot). Unlike
+`Depends on:` and `Constrained by:`, `Archives:` is **not** an execution gate: listed
+records stay in `implemented/` while the plan runs and are moved to `archived/` by
+`mm-land` when the delivery ships. Never list a `proposed/` record in `Archives:`.
 
 ## Scope / Not in scope
 

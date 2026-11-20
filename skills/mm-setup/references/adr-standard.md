@@ -43,7 +43,8 @@ the mechanism becomes a record when the defect's cause is worth not repeating.
 
 The date is when the topic was **first proposed**, per git history. Superseding a
 decision means adding a new file, never rewriting the old one into its opposite;
-keep both cross-linked.
+keep active records cross-linked (archived records stay frozen, linked from the
+new record).
 
 ## File format
 
@@ -134,6 +135,12 @@ rationale has created a second copy that will drift, so it links the records ins
   (plans are deleted on landing, while ADR links are updated automatically). While a
   `Depends on:` or `Constrained by:` target remains in `proposed/`, it blocks
   execution of the dependent plan.
+- `Archives:` (optional) lists existing `implemented/` ADR(s)
+  (`../implemented/{class}/{record}.md`) that this delivery retires or supersedes
+  and that satisfy [Archiving](#archiving). Unlike `Depends on:` and
+  `Constrained by:`, `Archives:` is not an execution gate: listed records stay in
+  `implemented/` during execution and move to `archived/` when the delivery lands.
+  Never list a `proposed/` record in `Archives:`.
 - Every listed `ADR:` record ships with this plan. A record that half-shipped stays in
   `proposed/` — `implemented/` means delivered, not attempted — and is removed from
   the header before landing.
@@ -157,9 +164,12 @@ freezes the file. `implemented/` → `archived/` changes no prose at all — see
 
 ## Supersession and consolidation
 
-Superseding a decision adds a new record and cross-links both; it never rewrites the
-old file into its opposite, and never lets git history be the only copy of the old
-rationale.
+Superseding a decision adds a new record; it never rewrites the old file into its
+opposite, and never lets git history be the only copy of the old rationale. If the
+superseded record remains active in `implemented/`, keep both cross-linked. If it
+is archived alongside the superseding delivery (per [Archiving](#archiving)), the
+new record links to the archived copy while the archived file's prose remains
+frozen untouched.
 
 A fully superseded `implemented/` record may be consolidated into the current owner
 and deleted, but only when the owner preserves every unique rationale, alternative,
@@ -174,6 +184,11 @@ is unlikely to guide future work, and it still has historical value. Keep it act
 instead when any of these is still load-bearing: alternatives, ownership boundaries,
 negative guarantees, durable or wire semantics, security rules, or conditions for
 reintroduction.
+
+Archiving is normally evaluated and confirmed during planning (recorded via
+`Archives:` in the superseding or retiring `.plan.md`) and executed atomically when
+that delivery lands, or performed standalone on explicit user request when cleaning
+up stale `implemented/` records.
 
 Never archive a `proposed/` record — reject it. Delete rather than archive when the
 record covers only small UI adjustments or purely mechanical change.
