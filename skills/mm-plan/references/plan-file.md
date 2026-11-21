@@ -16,7 +16,6 @@ ADR: <class>/<record>.md
 ADR: <other-class>/<other-record>.md
 Depends on: <class>/<prerequisite-record>.md
 Constrained by: ../implemented/<class>/<constraint-record>.md
-Archives: ../implemented/<class>/<retired-record>.md
 
 ## Scope
 ## Not in scope
@@ -44,8 +43,8 @@ attempted.
 
 `Depends on:` lists prerequisite ADR(s) whose delivery must complete before this plan
 starts. Always point to the prerequisite ADR (`.md`), never its `.plan.md` — plans
-are deleted on landing, whereas ADR links are automatically updated when the record
-moves to `implemented/`.
+are deleted when their ADR records are promoted to `implemented/`, whereas ADR links
+are automatically updated on promotion.
 
 `Constrained by:` lists other records that bind the work without being executed here
 (a design system, a packaging decision that forbids new dependencies, a naming rule).
@@ -55,16 +54,8 @@ boundary.
 
 Both `Depends on:` and `Constrained by:` double as execution order gates: while any
 referenced record still sits under `proposed/`, this plan is blocked behind it; once
-`mm-land` promotes that record and rewrites the link to `../implemented/...`, this
-plan becomes ready.
-
-`Archives:` (optional, repeatable) lists existing `implemented/` record(s)
-(`../implemented/<class>/<record>.md`) that this delivery retires or supersedes and
-that satisfy the archiving criteria in `.agents/ADR/AGENTS.md` (no load-bearing
-constraints remain, yet historical value warrants keeping a frozen snapshot). Unlike
-`Depends on:` and `Constrained by:`, `Archives:` is **not** an execution gate: listed
-records stay in `implemented/` while the plan runs and are moved to `archived/` by
-`mm-land` when the delivery ships. Never list a `proposed/` record in `Archives:`.
+the prerequisite delivery promotes that record to `implemented/` and rewrites the link
+to `../implemented/...`, this plan becomes ready.
 
 ## Scope / Not in scope
 
@@ -90,7 +81,7 @@ into short indented sub-bullets, and initialize `Verify:` with `— pending`:
 
 During execution, replace `— pending` with **one concise summary line** (date +
 measured scope/counts, e.g. ``Verify: `pnpm test src/config/load.test.ts` — passed 2026-11-16: 14 tests (1 file)``)
-so a later session running `mm-land` can verify every step ran without turning
+so a later session resuming the plan or reviewing the PR can verify every step ran without turning
 `## Steps` into a wall of prose. Keep debugging narratives and fixed-bug stories in
 your chat report, not inside `Verify:`. Do not repeat these checks in
 `## Verification`. That section belongs to the human, and duplicating an assertion in
@@ -102,17 +93,18 @@ investigate" is a red flag — investigation happens before the plan.
 
 ## Verification
 
-This is the human's acceptance checklist and `mm-land`'s contract. Every line is a
+This is the human's end-to-end acceptance checklist for PR review. Every line is a
 checkbox with its result recorded beside it:
 
 ```markdown
 - [x] `pnpm test` green — 142 passed, 2026-11-16
 - [x] `config show` prints a source column — manual, 3 keys checked
-- [ ] malformed TOML exits non-zero — not run
+- [ ] malformed TOML exits non-zero — manual check pending PR review
 ```
 
-An unchecked line blocks promotion to `implemented/`. Recording the result, not just
-the tick, is what lets a later session tell "verified" from "someone assumed".
+Recording the result, not just the tick, is what lets a reviewer tell "verified" from
+"someone assumed". `mm-implement` runs any automated checks here and reports remaining
+manual checks for PR review before deleting the plan file on promotion.
 
 List here only what a person confirms: manual checks, cross-step behaviour, and
 at most one final end-to-end command run (e.g., full test suite + build). Per-step
@@ -158,9 +150,11 @@ Plans are working state: edit them directly when a detail moves. Do not append a
 changelog — git already has one, and a plan that argues with its own history is a
 record wearing the wrong clothes.
 
-On `mm-land`, the plan file is deleted: ephemeral step-level debug notes disappear
-with it, while permanent fact shifts (paths, defaults, dependency versions) and any
-waived `## Verification` gaps fold into the promoted ADR's `## Consequences`.
+When `mm-implement` finishes all steps and promotes the ADR records to `implemented/`
+in the same change/PR, the plan file is deleted: ephemeral step-level debug notes
+disappear with it, while permanent fact shifts (paths, defaults, dependency versions)
+fold into the promoted ADR's `## Consequences`. Remaining manual `## Verification`
+items are surfaced in the delivery summary for PR review.
 
 If the direction itself changes, stop editing. The record is superseded by a new
 `proposed/` record, and this plan is deleted rather than migrated. A plan only ever

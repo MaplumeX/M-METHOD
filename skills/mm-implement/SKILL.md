@@ -18,16 +18,13 @@ find "$REPO_ROOT/.agents/ADR/proposed" -name '*.plan.md' 2>/dev/null | sort
 
 - **不存在 `.plan.md`**：检查当前对话是否已有经 `mm-plan` 确认、且按其规则无需落盘的对话计划；若有，直接按其步骤与验证规则执行。若两者皆无，则不属于本 skill 职责——微小修改直接改即可，较大需求应停下并建议先走 `mm-plan`；若用户坚持无计划直接开发，须明确声明处于「无计划开发」状态并在最终报告中记录该偏离。
 - **存在 `.plan.md`（单份或多份）**：先只读扫描所有 `.plan.md` 的头部（`ADR:`、`Depends on:`、`Constrained by:`）以及各自 `## Steps` 中的 `Verify:` 实测记录，将每份计划归类：
-  - **Ready（可执行）**：无 `Depends on:` / `Constrained by:`，或它们指向的 ADR 均已位于 `implemented/`（且自身仍有未完成或未验证步骤）。
-  - **Awaiting land（步骤已完待归档）**：自身 `## Steps` 均已记录实测 `Verify:` 结果，但关联 ADR 仍在 `proposed/`，等待用户通过 `mm-land` 验收。
+  - **Ready（可执行）**：无 `Depends on:` / `Constrained by:`，或它们指向的 ADR 均已位于 `implemented/`（包含步骤已全跑完但上次中断尚未完成收口升格的计划）。
   - **Blocked（被前置阻塞）**：至少有一条 `Depends on:` / `Constrained by:` 仍指向 `proposed/` 中的 ADR（标出具体阻塞源及该前置计划当前状态）。
   - **Invalidated（前置失效）**：至少有一条依赖指向 `rejected/` 中的 ADR（须退回 `mm-plan` 修订或废弃）。
 
 - **多 Plan 队列裁决**（当存在多个 `.plan.md` 时）：
-  - **用户未指定目标**：向用户展示解析出的依赖拓扑与状态队列。若仅有 1 份 **Ready**（其余为 `Blocked` 或 `Awaiting land`），直接推荐并确认执行该 **Ready** 计划；若存在多个相互独立的 **Ready** 计划，只列出这些 **Ready** 项请用户选择；若全部处于 `Awaiting land`，提示先通过 `mm-land` 验收归档。
-  - **用户指定了处于 `Blocked` 的计划**：
-    - 若其全部阻塞前置均已对应 **Awaiting land** 计划（步骤全绿但尚未 `mm-land`）：提示「前置计划代码已完成但尚未验收归档」，建议先运行 `mm-land`，或请用户明确授权跳过验收、直接基于当前实现继续；
-    - 若任一前置尚未完成步骤（甚至未开工）：拦截并说明缺失的前置交付，绝不静默越序开工。
+  - **用户未指定目标**：向用户展示解析出的依赖拓扑与状态队列。若仅有 1 份 **Ready**（其余为 `Blocked`），直接推荐并确认执行该 **Ready** 计划；若存在多个相互独立的 **Ready** 计划，只列出这些 **Ready** 项请用户选择。
+  - **用户指定了处于 `Blocked` 的计划**：拦截并说明缺失的前置交付（前置 ADR 仍在 `proposed/` 未随交付升格），建议先完成前置计划，除非用户明确授权基于当前代码实现直接继续；绝不静默越序开工。
   - **选定目标后**：通读目标计划全篇、`.agents/ADR/AGENTS.md`（若存在，重点核对 `## References from code` 格式），以及计划头部 `ADR:`、`Depends on:` 和 `Constrained by:` 指向的所有记录。执行阶段 ADR 为只读约束，用于界定边界，不授权推翻决策。
 
 **前置完整性红线**：执行开始时，`ADR:`、`Depends on:` 与 `Constrained by:` 指向的记录必须已全部存在。若计划里仍有「去创建某份 ADR」的步骤，或存在未放行的 `proposed/` / `rejected/` 前置依赖，说明规划阶段漏掉了前置决策或前置尚未交付，立即停下并建议先完成前置交付或通过 `mm-plan` 补齐修订。
@@ -62,29 +59,62 @@ find "$REPO_ROOT/.agents/ADR/proposed" -name '*.plan.md' 2>/dev/null | sort
 
 ## 5. 当现实与计划冲突时
 
-- **与已定 ADR 冲突**：若发现 `implemented/` 或已定案核心决策不再成立，停下说明原因，建议用 `mm-plan` 起草替代记录，绝不为迁就代码改写原 ADR。若仅是对仍处于 `proposed/` 的记录在实施中补充局部参数或细节（未推翻主方向），**不得静默改完不报**，须在汇报中单列「提议阶段修订（Pending approval）」说明改前/改后值、原因与风险，等待用户确认后再决定是否同步更新 `proposed/` ADR。
+- **与已定 ADR 冲突**：若发现 `implemented/` 或已定案核心决策不再成立，停下说明原因，建议用 `mm-plan` 起草替代记录，绝不为迁就代码改写原 ADR。若仅在实施中微调了局部客观参数或细节（未推翻主方向），**不得静默改完不报**：全量完成并在第 6 节升格为 `implemented/` 时同步反映这些客观事实，同时在最终报告中单列改前/改后值、原因与风险供 PR Review 核对；若中途停下或仅执行了部分步骤，则保留在 `proposed/` 并在汇报中标出待确认项。
 - **前提条件失效**（文件被删改、依赖变更、API 行为与预期不符）：停下并汇报，由用户决定修订计划还是调整路径，绝不静默偏离。
 - **命中停止条件（Stop point）**：执行中触发 `## Stop points` 所列异常/风险条件或不可逆外部操作边界时，立即停下并询问用户，等待明确指令后再继续，不自行发明 workaround。
 
-## 6. 汇报结果与收尾边界
+## 6. 交付升格与替代审查（同 PR 收口）
 
-汇报前先做**收尾自检**（仅修正遗漏后再汇报）：
-- 核对 `.plan.md` 中所有已执行步骤的 `Verify:` 行均已填入实测范围与日期（无遗漏或残留 `pending`）。
-- 对照 `ADR:` / `Constrained by:` 中的关键非显而易见约束，核对对应核心实现文件均已落注 `See ADR <date>-<slug>.`。
-- 比对实现后的真实参数（尺寸、阈值、token、文件路径）与 `proposed/` ADR：若有局部变动，确保已在报告中单列「提议阶段修订（Pending approval）」。
+**PR Review 即验收闸门**：仅当目标 `.plan.md` **全部步骤执行完成、每步 `Verify:` 均通过**，且未发生核心决策漂移、未命中阻塞停止、也非仅执行用户指定子集时，才在同一工作区/分支内原子完成以下收口（部分执行或受阻停止时**跳过本节**，保持 `.plan.md` 与 `proposed/` ADR 原样等待续做）：
+
+1. **核对交付完整性与自动验收项**
+   - 核对 `.plan.md` 中所有步骤的 `Verify:` 行均已填入实测范围与日期（无 `pending` 残留），且关键约束文件已按规范落注 `See ADR <date>-<slug>.`。
+   - 逐条检查头部列出的 `ADR:`：其 `## Acceptance criteria` 是否已在代码中真实落地。若有某份 ADR 尚未完全交付，停下并向用户说明——绝不把半成品迁入 `implemented/`。
+   - 运行 `## Verification` 中可由你执行的最终检查命令并记录结果；需要人工判断或真机核验的条目保留清单并在最终报告中单列，供 PR Review 审阅确认（严禁虚构人工测试结论）。
+
+2. **删除计划文件并升格 ADR（`proposed/` → `implemented/`）**
+   - 删除对应的 `.agents/ADR/proposed/{delivery}.plan.md`。
+   - 按各自所属 `{class}` 移动计划头部列出的全部已交付 `ADR:`（一次交付可能横跨多个分类）：
+
+     ```bash
+     mkdir -p .agents/ADR/implemented/{class}
+     mv .agents/ADR/proposed/{class}/{name}.md \
+        .agents/ADR/implemented/{class}/{name}.md
+     ```
+
+   - 按 `.agents/ADR/AGENTS.md` 重写每份升格记录：
+     - 将 `Status: proposed` 改为 `Status: implemented`。
+     - 将 `## Proposal` 改为现在时态的 `## Decision`。
+     - 将 `## Acceptance criteria` 和 `## Risks` 归并入 `## Consequences`（单步调试细节随 `.plan.md` 丢弃，不搬入 ADR）。
+     - 同步修正实施中变动的客观事实（路径、符号名、默认值、实际依赖版本），并在最终报告中列出这些事实修订供 PR Review 核对；若核心决策本身改变，停下走替代决策流程。
+
+3. **触发内联替代审查（调用 `mm-archive`）**
+   - 加载并执行 `mm-archive` 对覆盖同一决策、机制或被否决备选方案的活跃 ADR 做局部替代审查：完全替代且无残留活跃约束的旧 `implemented/` 记录同变更迁入 `archived/`（或纯机械/小 UI 直接删除），部分替代则留在 `implemented/` 并补齐双向链接；一并处理明确被淘汰的 `proposed/` / `rejected/` 记录。
+
+4. **全仓修复入站链接**
+   - 对本次所有升格记录（`{name}.md`）及在替代审查中归档/删除的记录，分别按文件名全仓检索：
+
+     ```bash
+     grep -rn --exclude-dir=.git --exclude-dir=node_modules "{file}.md" . 2>/dev/null
+     ```
+
+   - 根据引用方所在目录更新相对路径（同目录用裸文件名，跨目录按相对层级计算；包括仍在 `proposed/` 中的其他 `.plan.md` 的 `Depends on:` / `Constrained by:`）。
+   - 严禁修改 `archived/` 中的历史冻结记录；代码注释中的 `ADR <date>-<slug>` 不含路径，无需改动。
+
+## 7. 汇报结果与收尾边界
 
 向用户汇报：
 1. 已完成步骤及每步 `Verify:` 的真实执行结果与覆盖范围。
-2. `## Verification` 中可由你执行的检查项及结果；**需要人工判断的验收项保持未勾选**（替人打勾等于替人签字验收）。
-3. 提议阶段修订（Pending approval，如有）：列出代码已调整但 `proposed/` ADR 仍待同步确认的参数与细节。
+2. `## Verification` 中已运行的自动检查结果，以及**待人工在 PR Review 时核验的检查清单**。
+3. 交付收口情况（如已完成全部步骤）：已删除的 `.plan.md`、已升格至 `implemented/` 的 ADR、实施中同步修正的局部参数/事实（如有）、`mm-archive` 替代审查及归档/删除结果、修复的链接，以及由此变为 **Ready** 的后续 Plan。
 4. 发现但按 `## Not in scope` 有意未修复的问题及原因。
-5. 继续后续工作前，计划本身是否需要修订。
+5. 若未完成全量交付：明确剩余步骤、停止原因，以及继续前计划是否需要修订。
 
-**红线**：除非用户明确要求，否则不要执行 `git commit`，不要移动 ADR，不要删除 `.plan.md`，也不要调用 `mm-land`——验收归档属于用户的决策动作，不取决于测试是否全绿。
+**红线**：除非用户明确要求，否则不要执行 `git commit` 或 `git push`——代码、升格后的 ADR 与随同归档的旧记录保留在工作区，由用户通过 diff / PR Review 统一验收把关。
 
-## 7. 退出条件
+## 8. 退出条件
 
 满足以下任一情形即结束：
-- **全部完成**：所有步骤均已执行且 `.plan.md` 中无未回写实测的已执行步骤；关键约束代码已按规范落注 `See ADR`；`## Verification` 中可自动执行的检查项已运行并记录结果；ADR 仍留在 `proposed/`，`.plan.md` 仍保留在原位；已明确列出待人工核验项及提议阶段修订（如有）。
-- **部分执行或受阻停止**：已说明已完成步骤、停止原因（指定子集完成 / Stop point / 前提失效 / ADR 冲突 / 连续验证失败）及剩余步骤，未完成或未通过项保持未勾选。
+- **全量完成并收口**：所有步骤均已执行且 `Verify:` 全绿；关键约束代码已落注 `See ADR`；对应 `.plan.md` 已删除、全部已交付 `ADR:` 已按规范升格至 `implemented/`、内联替代审查与入站链接修复已完成；`## Verification` 中自动检查项已运行、人工检查项已列出供 PR Review 核验；工作区未自动提交。
+- **部分执行或受阻停止**：已说明已完成步骤、停止原因（指定子集完成 / Stop point / 前提失效 / ADR 冲突 / 连续验证失败）及剩余步骤；`.plan.md` 与 `proposed/` ADR 保留在原位未升格，未完成或未通过项保持未勾选。
 - **只读进度查询**：已核对并汇报已完成/待办步骤及人工核验状态，未改动工作区代码。

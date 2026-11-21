@@ -60,7 +60,14 @@ disable-model-invocation: true
 
    该区块刻意保持极简：入口文件每次会话都会加载，只保留路径约定与读取指针；完整规范按需再读 `.agents/ADR/AGENTS.md`。
 
-6. **汇报结果**
+6. **配置 `.rgignore` 检索隔离**
+
+   确保仓库根目录 `.rgignore` 包含 `.agents/ADR/archived/`，防止过时的冻结历史快照污染日常全局检索（显式指定目录时仍可检索）：
+   - 文件已存在且包含 `.agents/ADR/archived/` → 跳过。
+   - 文件已存在但未包含 → 末尾追加一行 `.agents/ADR/archived/`。
+   - 文件不存在 → 新建 `.rgignore` 并写入 `.agents/ADR/archived/`。
+
+7. **汇报结果**
 
    列出所有涉及的文件路径及对应操作（新建、追加、替换或跳过）。除非用户明确要求，否则不要编写示例 ADR。
 
@@ -68,3 +75,4 @@ disable-model-invocation: true
 
 - `.agents/ADR/AGENTS.md` 已就位且与标准一致，或用户明确保留自定义版本。
 - 目标入口文件中恰好包含一个起止标记完整的 `decision-records` 区块，且文件其余内容未被改动。
+- 根目录 `.rgignore` 已排除 `.agents/ADR/archived/`。

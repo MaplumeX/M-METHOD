@@ -24,7 +24,8 @@ duplicates path metadata and makes unrelated note changes contend on one file.
   proposal.
 - `archived/` — a frozen snapshot of an `implemented/` record that no longer guides
   future work but still has historical value. Never current authority. Create it
-  when the first record enters it.
+  when the first record enters it, and ignore it in `.rgignore` so stale facts stay
+  out of default repository searches.
 
 **Class** is the kind of decision. The set is closed — adding one means editing
 this file:
@@ -132,26 +133,22 @@ rationale has created a second copy that will drift, so it links the records ins
 - `Depends on:` (optional) lists prerequisite ADR(s) whose delivery must complete
   before this plan runs; `Constrained by:` (optional) lists records that bind the
   work without shipping in it. Always link the ADR (`.md`), never its `.plan.md`
-  (plans are deleted on landing, while ADR links are updated automatically). While a
-  `Depends on:` or `Constrained by:` target remains in `proposed/`, it blocks
-  execution of the dependent plan.
-- `Archives:` (optional) lists existing `implemented/` ADR(s)
-  (`../implemented/{class}/{record}.md`) that this delivery retires or supersedes
-  and that satisfy [Archiving](#archiving). Unlike `Depends on:` and
-  `Constrained by:`, `Archives:` is not an execution gate: listed records stay in
-  `implemented/` during execution and move to `archived/` when the delivery lands.
-  Never list a `proposed/` record in `Archives:`.
+  (plans are deleted when their ADR records are promoted to `implemented/`, while
+  ADR links are updated automatically). While a `Depends on:` or `Constrained by:`
+  target remains in `proposed/`, it blocks execution of the dependent plan.
 - Every listed `ADR:` record ships with this plan. A record that half-shipped stays in
   `proposed/` — `implemented/` means delivered, not attempted — and is removed from
-  the header before landing.
+  the header before promoting the rest.
 - Plans exist only in `proposed/`. Finding a plan outside `proposed/`, or lingering
-  after its `ADR:` records moved to `implemented/`, means the work was recorded as
-  shipped before its acceptance check ran.
+  after its `ADR:` records moved to `implemented/`, means promotion and cleanup were
+  left incomplete.
 - Plans are edited freely — they are working state, not history.
-- Delete the plan in the same change that promotes its records to `implemented/`.
+- Delete the plan in the same change/PR that promotes its records to `implemented/`.
   Git holds the history; a retained plan becomes a second source of rationale.
 - When the direction changes, the records are superseded and the old plan is deleted.
   A plan never migrates to different records.
+- Decisions already made and shipped directly in a change may be written straight
+  into `implemented/` without passing through `proposed/` or a `.plan.md`.
 
 ## Moving between lifecycles
 
@@ -164,10 +161,17 @@ freezes the file. `implemented/` → `archived/` changes no prose at all — see
 
 ## Supersession and consolidation
 
+**Every new or promoted `implemented/` record triggers a supersession check.**
+Search active records covering the same decision, mechanism, or rejected
+alternative and classify every full or partial overlap in the same change/PR:
+archive or delete qualifying `implemented/` records (per [Archiving](#archiving)),
+keep partial supersessions active and cross-linked, reject obsolete `proposed/`
+records, and delete `rejected/` records that no longer prevent a plausible mistake.
+
 Superseding a decision adds a new record; it never rewrites the old file into its
 opposite, and never lets git history be the only copy of the old rationale. If the
 superseded record remains active in `implemented/`, keep both cross-linked. If it
-is archived alongside the superseding delivery (per [Archiving](#archiving)), the
+is archived alongside the superseding change (per [Archiving](#archiving)), the
 new record links to the archived copy while the archived file's prose remains
 frozen untouched.
 
@@ -179,19 +183,22 @@ must not reverse the old decision's meaning.
 
 ## Archiving
 
-Move a record to `archived/` only when its decision is fully shipped, its rationale
-is unlikely to guide future work, and it still has historical value. Keep it active
-instead when any of these is still load-bearing: alternatives, ownership boundaries,
-negative guarantees, durable or wire semantics, security rules, or conditions for
-reintroduction.
+Delete rather than archive an `implemented/` record that covers only small UI
+adjustments or purely mechanical changes (and repair or remove inbound links). Move
+other `implemented/` records to `archived/` only when the decision is fully
+shipped, its rationale is unlikely to guide future work, and it still has
+historical value. Keep it active instead when any of these is still load-bearing:
+alternatives, ownership boundaries, negative guarantees, durable or wire semantics,
+security rules, or conditions for reintroduction.
 
-Archiving is normally evaluated and confirmed during planning (recorded via
-`Archives:` in the superseding or retiring `.plan.md`) and executed atomically when
-that delivery lands, or performed standalone on explicit user request when cleaning
-up stale `implemented/` records.
+Judge every record semantically — never archive by age, word count, or quota.
+Archiving happens in two places: inline in the same change/PR whenever a new or
+promoted `implemented/` record supersedes or retires an older one, or on demand
+when auditing stale records.
 
-Never archive a `proposed/` record — reject it. Delete rather than archive when the
-record covers only small UI adjustments or purely mechanical change.
+Never archive a `proposed/` record — reject or delete it. Keep a `rejected/` record
+only while it prevents a tempting, plausible mistake; otherwise delete it and
+repair or remove inbound links.
 
 Archiving changes exactly two things: the file moves to `archived/{class}/`, and
 `Status: implemented` becomes:
@@ -204,7 +211,10 @@ Archived: YYYY-MM-DD
 Nothing else in the file changes. An archived record keeps the `implemented/`
 skeleton, is permanently frozen — never edited, reformatted, moved, or deleted —
 and is not authority for current behaviour. Active records may still link into the
-archive when citing history.
+archive when citing history; never validate or repair outbound links inside
+`archived/`. Keep `.agents/ADR/archived/` in `.rgignore` so frozen snapshots do not
+pollute default repository searches (query the archive directory explicitly when
+history is needed).
 
 ## Cross-references
 
