@@ -63,7 +63,7 @@ Raw ramps live on `:root`; **components consume semantic tokens only**:
 | Text | `--text`, `--text-secondary`, `--text-muted` | `neutral-900`, `neutral-700`, `neutral-500` |
 | Borders | `--border`, `--border-strong` | `neutral-200`, `neutral-300` |
 | Accent | `--accent`, `--accent-hover`, `--accent-subtle`, `--accent-fg` | `primary-600`, `primary-700`, `primary-100`, `#fff` |
-| Status | `--status-<state>-bg`, `--status-<state>-border`, `--status-<state>-fg` | `100`, `500`, `800`/`900` |
+| Status | `--status-<state>-bg`, `--status-<state>-border`, `--status-<state>-fg` | `100`, `200`, `800`/`900` (dark: `900`, `700`, `100`/`200`) |
 | Interactive | `--focus-ring`, `--disabled-bg`, `--disabled-fg` | `primary-600`, `neutral-100`, `neutral-400` |
 
 Dark mode rules (`[data-theme="dark"]` or project selector):

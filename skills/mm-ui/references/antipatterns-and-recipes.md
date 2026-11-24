@@ -37,7 +37,7 @@ When reviewing (**Review**), audit from rendered screenshots (`1440px` + `400px`
 - **Light comes from above**: raised elements reveal a lighter top edge (hand-picked color, never semi-transparent white) + sharp dark shadow below; inset elements (inputs, checkboxes) have a dark top inset shadow + lighter bottom lip.
 - **Two-part shadows**: pair a larger soft cast shadow with a tighter darker ambient-occlusion shadow directly beneath; fade the ambient layer as elevation rises.
 - **Flat depth & overlap**: use lighter/darker same-hue surfaces or zero-blur vertical solid shadows (`0 2px 0 ...`). Overlap cards across background transitions or layer avatars with an invisible border matching the page background.
-- **Finishing without redesigning**: replace generic bullets with domain icons; enlarge/recolor quote marks; style custom checkboxes/radios and hover underlines; add a crisp accent border (`card` top, `active nav`, `alert` left edge, short headline underline); break up flat backdrops with `<= 30°` gradients or low-contrast edge patterns/geometry.
+- **Finishing without redesigning**: replace generic bullets with domain icons; enlarge/recolor quote marks; style custom checkboxes/radios and hover underlines; add a crisp short underline beneath key headlines; break up flat backdrops with `<= 30°` gradients or low-contrast edge patterns/geometry.
 - **Think outside standard widgets**: split dropdowns into sections/columns with supporting text and icons; merge related table columns for hierarchy; turn important radio groups into selectable cards.
 
 ## 4 · Canonical Component Recipes
@@ -63,7 +63,9 @@ When reviewing (**Review**), audit from rendered screenshots (`1440px` + `400px`
 - **Modal**:
   - Scrim `neutral-900` ~40% opacity, panel `max-width 480–560px`, `padding N4`, `radius lg`, high elevation (step 5), top-right close button + **`Escape` closes**, actions bottom-right with primary last. For destructive actions, state the consequence in the title and keep Cancel clearly available.
 - **Alert**:
-  - `100`-step tinted background + `4px` left accent border (`500`-step) + `800/900`-step dark text (`>= 4.5:1`), status icon alongside text (never color alone), optional tertiary action (`Undo`) on the right.
+  - Same-hue tinted background (`100`-step light / `900`-step dark) + full-perimeter low-saturation `1px` same-hue border (`200`-step light / `700`-step dark, or borderless tinted fill) + high-contrast text (`800/900`-step light / `100/200`-step dark, `>= 4.5:1`), status icon alongside text (never color alone), optional tertiary action (`Undo`) on the right. Never use a `4px` left accent border.
+- **Active Nav Item**:
+  - Prefer a soft tinted fill (`--accent-subtle` or a raised neutral surface) paired with heavier font weight (`600`) and `--accent` / `--text` color to distinguish the active state. Never apply a single-sided `border-left` accent directly onto an item with `border-radius` (which bends into a cheap crescent); if the direction explicitly requires a side indicator, render it as an independently positioned short indicator bar detached from the corner radius or on a strictly square (`0` radius) rail.
 
 ## 5 · Loading, Error, Edge States & Browser Capture
 

@@ -15,7 +15,7 @@ For a new product or major surface, do a fast **2–3 peer benchmark**:
 
 ### Absolute Bans & AI Slop Tells
 Avoid these machine-generated reflex patterns unless explicitly justified by the direction:
-- **Thick side-border accents** on cards (use background step, elevation step, or nothing).
+- **Single-sided / thick side-border accents** on cards, rounded nav/list items, or alert banners (putting `border-left` on rounded corners bends into a crescent AI-slop tell; use background step, elevation step, full-perimeter `1px` tint border, or a detached unbent indicator).
 - **Gradient text** (illegible edges, contrast failures; use solid high-contrast color).
 - **Default glass / frosted cards** on flat pages (grey smear without a rich backdrop).
 - **Purple-to-blue or cyan-on-dark gradients** without brand justification.
